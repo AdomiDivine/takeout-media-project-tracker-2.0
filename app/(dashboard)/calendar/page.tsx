@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useTasks } from "@/lib/hooks/useTasks";
-import { format, isSameDay, startOfWeek, addDays, isThisWeek, isThisMonth, isPast, isToday } from "date-fns";
+import { format, isSameDay, startOfWeek, addDays, isThisWeek, isThisMonth, isPast, isToday, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types";
 
-type View = "month" | "week" | "timeline";
+type View = "month" | "week" | "gantt";
 
 const statusColors: Record<string, string> = {
   pending:     "bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30",
@@ -20,6 +20,13 @@ const statusLabels: Record<string, string> = {
 };
 const priorityColors: Record<string, string> = {
   high: "text-status-overdue", medium: "text-status-in-progress", low: "text-status-completed",
+};
+
+const ganttBarColors: Record<string, string> = {
+  pending:     "bg-muted-foreground/50",
+  in_progress: "bg-status-in-progress",
+  completed:   "bg-status-completed",
+  overdue:     "bg-status-overdue",
 };
 
 function MiniTask({ task }: { task: Task }) {
@@ -65,7 +72,6 @@ function MonthView({ tasks, today }: { tasks: Task[]; today: Date }) {
   return (
     <div className="space-y-4">
       <div className="bg-card border border-border rounded-xl p-5">
-        {/* Nav */}
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => setNavDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
             className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors">← Prev</button>
@@ -73,28 +79,24 @@ function MonthView({ tasks, today }: { tasks: Task[]; today: Date }) {
           <button onClick={() => setNavDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
             className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors">Next →</button>
         </div>
-
-        {/* Weekday headers */}
         <div className="grid grid-cols-7 mb-1">
           {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
             <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1.5">{d}</div>
           ))}
         </div>
-
-        {/* Grid */}
         <div className="grid grid-cols-7 gap-0.5">
           {cells.map(({ date, outside }, i) => {
-            const isSel    = isSameDay(date, selected);
-            const isTod    = isSameDay(date, today);
-            const isOvd    = tasks.some(t => t.status === "overdue" && isSameDay(new Date(t.deadline + "T00:00:00"), date));
-            const hasDue   = tasks.some(t => isSameDay(new Date(t.deadline + "T00:00:00"), date));
+            const isSel  = isSameDay(date, selected);
+            const isTod  = isSameDay(date, today);
+            const isOvd  = tasks.some(t => t.status === "overdue" && isSameDay(new Date(t.deadline + "T00:00:00"), date));
+            const hasDue = tasks.some(t => isSameDay(new Date(t.deadline + "T00:00:00"), date));
             return (
               <button key={i} onClick={() => setSelected(date)}
                 className={cn(
                   "relative flex flex-col items-center justify-center h-10 rounded-md text-sm transition-colors",
-                  isSel   && "bg-brand text-white",
-                  isTod   && !isSel && "bg-muted font-semibold",
-                  !isSel  && "hover:bg-muted",
+                  isSel  && "bg-brand text-white",
+                  isTod  && !isSel && "bg-muted font-semibold",
+                  !isSel && "hover:bg-muted",
                   outside && "opacity-30"
                 )}>
                 {date.getDate()}
@@ -105,15 +107,11 @@ function MonthView({ tasks, today }: { tasks: Task[]; today: Date }) {
             );
           })}
         </div>
-
-        {/* Legend */}
         <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="w-2 h-2 rounded-full bg-brand inline-block" /> Tasks due</span>
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="w-2 h-2 rounded-full bg-status-overdue inline-block" /> Overdue</span>
         </div>
       </div>
-
-      {/* Selected day tasks */}
       <div className="space-y-2">
         <h3 className="font-medium text-sm">
           {format(selected, "EEEE, MMMM d")}
@@ -138,34 +136,24 @@ function WeekView({ tasks, today }: { tasks: Task[]; today: Date }) {
 
   return (
     <div className="space-y-4">
-      {/* Nav */}
       <div className="flex items-center justify-between">
         <button onClick={() => setWeekStart(d => addDays(d, -7))}
           className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors">← Prev week</button>
-        <p className="text-sm font-semibold">
-          {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}
-        </p>
+        <p className="text-sm font-semibold">{format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}</p>
         <button onClick={() => setWeekStart(d => addDays(d, 7))}
           className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors">Next week →</button>
       </div>
-
-      {/* 7 columns */}
       <div className="grid grid-cols-7 gap-2">
         {days.map((day, i) => {
           const dayTasks = tasks.filter(t => isSameDay(new Date(t.deadline + "T00:00:00"), day));
-          const isToday  = isSameDay(day, today);
+          const isTodayDay = isSameDay(day, today);
           return (
             <div key={i} className="space-y-2">
-              {/* Day header */}
-              <div className={cn("rounded-lg p-2 text-center border", isToday ? "bg-brand text-white border-brand" : "bg-card border-border")}>
+              <div className={cn("rounded-lg p-2 text-center border", isTodayDay ? "bg-brand text-white border-brand" : "bg-card border-border")}>
                 <p className="text-[10px] font-medium opacity-80">{format(day, "EEE")}</p>
                 <p className="text-lg font-bold leading-none mt-0.5">{format(day, "d")}</p>
-                {dayTasks.length > 0 && (
-                  <p className="text-[10px] mt-0.5 opacity-70">{dayTasks.length} task{dayTasks.length !== 1 ? "s" : ""}</p>
-                )}
+                {dayTasks.length > 0 && <p className="text-[10px] mt-0.5 opacity-70">{dayTasks.length} task{dayTasks.length !== 1 ? "s" : ""}</p>}
               </div>
-
-              {/* Tasks */}
               <div className="space-y-1.5">
                 {dayTasks.map(task => (
                   <div key={task.id} className={cn("rounded-md p-1.5 border text-[10px] leading-snug", statusColors[task.status])}>
@@ -173,9 +161,7 @@ function WeekView({ tasks, today }: { tasks: Task[]; today: Date }) {
                     {(task as any).project?.name && <p className="opacity-70 truncate">{(task as any).project.name}</p>}
                   </div>
                 ))}
-                {dayTasks.length === 0 && (
-                  <div className="h-8 rounded-md border border-dashed border-border" />
-                )}
+                {dayTasks.length === 0 && <div className="h-8 rounded-md border border-dashed border-border" />}
               </div>
             </div>
           );
@@ -185,67 +171,199 @@ function WeekView({ tasks, today }: { tasks: Task[]; today: Date }) {
   );
 }
 
-// ─── Timeline View ────────────────────────────────────────────────────────────
-function TimelineView({ tasks, today }: { tasks: Task[]; today: Date }) {
-  const active = tasks.filter(t => t.status !== "completed");
+// ─── Gantt View ───────────────────────────────────────────────────────────────
+const DAY_W   = 38;   // px per day column
+const ROW_H   = 44;   // px per task row
+const LABEL_W = 220;  // px for the task name sidebar
+const DAYS    = 35;   // days visible at once
 
-  const groups: { label: string; tasks: Task[] }[] = [
-    { label: "Overdue",    tasks: active.filter(t => t.status === "overdue") },
-    { label: "Today",      tasks: active.filter(t => t.status !== "overdue" && isToday(new Date(t.deadline + "T00:00:00"))) },
-    { label: "This Week",  tasks: active.filter(t => t.status !== "overdue" && !isToday(new Date(t.deadline + "T00:00:00")) && isThisWeek(new Date(t.deadline + "T00:00:00"), { weekStartsOn: 1 })) },
-    { label: "This Month", tasks: active.filter(t => t.status !== "overdue" && !isThisWeek(new Date(t.deadline + "T00:00:00"), { weekStartsOn: 1 }) && isThisMonth(new Date(t.deadline + "T00:00:00"))) },
-    { label: "Later",      tasks: active.filter(t => {
-      const d = new Date(t.deadline + "T00:00:00");
-      return t.status !== "overdue" && !isThisMonth(d) && !isPast(d);
-    })},
-  ].filter(g => g.tasks.length > 0);
+function GanttView({ tasks, today }: { tasks: Task[]; today: Date }) {
+  const [rangeStart, setRangeStart] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
 
-  if (groups.length === 0)
-    return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground bg-card border border-border rounded-xl">
-        <p className="text-sm">No upcoming tasks.</p>
-      </div>
-    );
+  const rangeEnd = addDays(rangeStart, DAYS - 1);
+  const days     = Array.from({ length: DAYS }, (_, i) => addDays(rangeStart, i));
+  const todayCol = differenceInDays(today, rangeStart);
+
+  const sortedTasks = [...tasks]
+    .filter(t => !t.deleted_at)
+    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+
+  // Group day headers by month
+  const totalWidth = LABEL_W + DAYS * DAY_W;
 
   return (
-    <div className="space-y-6">
-      {groups.map(({ label, tasks: groupTasks }) => (
-        <div key={label} className="relative pl-6">
-          {/* Timeline line */}
-          <div className="absolute left-2 top-6 bottom-0 w-px bg-border" />
+    <div className="space-y-4">
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setRangeStart(d => addDays(d, -DAYS))}
+          className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
+        >← Prev</button>
+        <p className="text-sm font-semibold">
+          {format(rangeStart, "MMM d")} – {format(rangeEnd, "MMM d, yyyy")}
+        </p>
+        <button
+          onClick={() => setRangeStart(d => addDays(d, DAYS))}
+          className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
+        >Next →</button>
+      </div>
 
-          {/* Group label */}
-          <div className="flex items-center gap-2 mb-3">
-            <div className={cn("absolute left-0 w-4 h-4 rounded-full border-2 border-background",
-              label === "Overdue" ? "bg-status-overdue" :
-              label === "Today"   ? "bg-brand" :
-              "bg-muted-foreground/40"
-            )} />
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-            <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">{groupTasks.length}</span>
-          </div>
+      {/* Legend */}
+      <div className="flex items-center gap-4 flex-wrap">
+        {Object.entries({ pending: "Pending", in_progress: "In Progress", completed: "Completed", overdue: "Overdue" }).map(([k, label]) => (
+          <span key={k} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className={cn("w-3 h-3 rounded-sm inline-block", ganttBarColors[k])} />
+            {label}
+          </span>
+        ))}
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="w-px h-3 bg-brand inline-block" /> Today
+        </span>
+      </div>
 
-          {/* Tasks */}
-          <div className="space-y-2">
-            {groupTasks.map(task => (
-              <div key={task.id} className={cn("bg-card border rounded-lg p-3 flex items-start justify-between gap-3", task.status === "overdue" ? "border-status-overdue/40" : "border-border")}>
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-sm font-medium leading-snug">{task.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                    {(task as any).project?.name && <span>{(task as any).project.name}</span>}
-                    <span>·</span>
-                    <span>Due {format(new Date(task.deadline + "T00:00:00"), "MMM d")}</span>
-                    <span className={cn("font-medium", priorityColors[task.priority])}>· {task.priority} priority</span>
-                  </div>
+      {/* Chart */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: totalWidth }}>
+
+            {/* Month header */}
+            <div className="flex border-b border-border bg-muted/30" style={{ minWidth: totalWidth }}>
+              <div style={{ width: LABEL_W, minWidth: LABEL_W }} className="sticky left-0 z-20 bg-muted/30 border-r border-border" />
+              {days.map((day, i) => (
+                <div
+                  key={i}
+                  style={{ width: DAY_W, minWidth: DAY_W }}
+                  className={cn("border-r border-border/40 text-center py-1", isToday(day) && "bg-brand/10")}
+                >
+                  {(i === 0 || day.getDate() === 1) && (
+                    <span className="text-[10px] font-semibold text-brand block">{format(day, "MMM yyyy")}</span>
+                  )}
                 </div>
-                <Badge variant="outline" className={cn("text-[10px] flex-shrink-0", statusColors[task.status])}>
-                  {statusLabels[task.status]}
-                </Badge>
+              ))}
+            </div>
+
+            {/* Day number header */}
+            <div className="flex border-b border-border" style={{ minWidth: totalWidth }}>
+              <div
+                style={{ width: LABEL_W, minWidth: LABEL_W }}
+                className="sticky left-0 z-20 bg-card border-r border-border flex items-center px-4"
+              >
+                <span className="text-xs font-medium text-muted-foreground">Task</span>
               </div>
-            ))}
+              {days.map((day, i) => (
+                <div
+                  key={i}
+                  style={{ width: DAY_W, minWidth: DAY_W }}
+                  className={cn(
+                    "border-r border-border/40 text-center py-1.5",
+                    isToday(day) ? "bg-brand/10" : ""
+                  )}
+                >
+                  <span className={cn("text-xs", isToday(day) ? "text-brand font-bold" : "text-muted-foreground")}>
+                    {format(day, "d")}
+                  </span>
+                  <span className={cn("block text-[9px]", isToday(day) ? "text-brand/70" : "text-muted-foreground/50")}>
+                    {format(day, "EEE")}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Task rows */}
+            {sortedTasks.length === 0 ? (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <p className="text-sm">No tasks to display.</p>
+              </div>
+            ) : (
+              sortedTasks.map((task, rowIdx) => {
+                const taskStart   = new Date(task.created_at);
+                const taskDeadline = new Date(task.deadline + "T00:00:00");
+
+                const startOffset = differenceInDays(taskStart, rangeStart);
+                const endOffset   = differenceInDays(taskDeadline, rangeStart);
+
+                const clampedStart = Math.max(0, startOffset);
+                const clampedEnd   = Math.min(DAYS - 1, endOffset);
+                const isVisible    = clampedEnd >= 0 && clampedStart <= DAYS - 1 && clampedEnd >= clampedStart;
+
+                const barLeft  = clampedStart * DAY_W + 2;
+                const barWidth = isVisible ? Math.max((clampedEnd - clampedStart + 1) * DAY_W - 4, 8) : 0;
+
+                const rowBg = rowIdx % 2 === 0 ? "bg-card" : "bg-muted/10";
+
+                return (
+                  <div
+                    key={task.id}
+                    className={cn("flex items-center border-b border-border/50 last:border-0", rowBg)}
+                    style={{ height: ROW_H, minWidth: totalWidth }}
+                  >
+                    {/* Task label — sticky */}
+                    <div
+                      style={{ width: LABEL_W, minWidth: LABEL_W, height: ROW_H }}
+                      className={cn("sticky left-0 z-10 border-r border-border flex flex-col justify-center px-4", rowBg)}
+                    >
+                      <p className="text-xs font-medium truncate leading-tight">{task.name}</p>
+                      {(task as any).project?.name && (
+                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">{(task as any).project.name}</p>
+                      )}
+                    </div>
+
+                    {/* Bar area */}
+                    <div className="relative flex-1" style={{ height: ROW_H }}>
+                      {/* Today vertical line */}
+                      {todayCol >= 0 && todayCol < DAYS && (
+                        <div
+                          style={{ left: todayCol * DAY_W + DAY_W / 2 }}
+                          className="absolute top-0 bottom-0 w-px bg-brand/50 z-10 pointer-events-none"
+                        />
+                      )}
+
+                      {/* Column zebra lines */}
+                      {days.map((day, i) => (
+                        <div
+                          key={i}
+                          style={{ left: i * DAY_W, width: DAY_W, height: ROW_H }}
+                          className={cn("absolute top-0 border-r border-border/20", isToday(day) && "bg-brand/5")}
+                        />
+                      ))}
+
+                      {/* Task bar */}
+                      {isVisible && (
+                        <div
+                          style={{ left: barLeft, width: barWidth, top: 8, height: ROW_H - 16 }}
+                          className={cn("absolute rounded-md overflow-hidden flex items-center", ganttBarColors[task.status])}
+                        >
+                          {/* Progress fill overlay */}
+                          {task.progress > 0 && task.status !== "completed" && (
+                            <div
+                              style={{ width: `${task.progress}%` }}
+                              className="absolute left-0 top-0 bottom-0 bg-white/25 rounded-md"
+                            />
+                          )}
+                          {/* Label inside bar */}
+                          {barWidth > 48 && (
+                            <span className="relative z-10 text-[10px] text-white font-medium px-2 truncate">
+                              {task.status === "completed" ? "Done" : task.progress > 0 ? `${task.progress}%` : format(new Date(task.deadline + "T00:00:00"), "MMM d")}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Out-of-range indicator */}
+                      {!isVisible && endOffset < 0 && (
+                        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">← before range</div>
+                      )}
+                      {!isVisible && startOffset >= DAYS && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">after range →</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
@@ -253,20 +371,19 @@ function TimelineView({ tasks, today }: { tasks: Task[]; today: Date }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function CalendarPage() {
   const { tasks, loading } = useTasks();
-  const [view, setView] = useState<View>("month");
+  const [view, setView] = useState<View>("gantt");
   const today = new Date();
 
   const views: { key: View; label: string }[] = [
-    { key: "month",    label: "Month" },
-    { key: "week",     label: "Week" },
-    { key: "timeline", label: "Timeline" },
+    { key: "month", label: "Month" },
+    { key: "week",  label: "Week"  },
+    { key: "gantt", label: "Gantt" },
   ];
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Calendar</h2>
-        {/* View toggle */}
         <div className="flex gap-1 bg-muted rounded-lg p-1">
           {views.map(({ key, label }) => (
             <button key={key} onClick={() => setView(key)}
@@ -283,9 +400,9 @@ export default function CalendarPage() {
         <div className="h-96 bg-muted rounded-xl animate-pulse" />
       ) : (
         <>
-          {view === "month"    && <MonthView    tasks={tasks} today={today} />}
-          {view === "week"     && <WeekView     tasks={tasks} today={today} />}
-          {view === "timeline" && <TimelineView tasks={tasks} today={today} />}
+          {view === "month" && <MonthView tasks={tasks} today={today} />}
+          {view === "week"  && <WeekView  tasks={tasks} today={today} />}
+          {view === "gantt" && <GanttView tasks={tasks} today={today} />}
         </>
       )}
     </div>
