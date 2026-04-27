@@ -124,7 +124,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="edit-status">Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+              <Select value={status} onValueChange={(v) => v && setStatus(v as TaskStatus)}>
                 <SelectTrigger id="edit-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
@@ -135,7 +135,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-priority">Priority</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+              <Select value={priority} onValueChange={(v) => v && setPriority(v as TaskPriority)}>
                 <SelectTrigger id="edit-priority"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="high">High</SelectItem>
