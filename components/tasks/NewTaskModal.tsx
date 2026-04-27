@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserPlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity";
-import type { Project, TaskPriority, TaskStatus } from "@/types";
+import type { Project, TaskPriority, TaskStatus, User } from "@/types";
 
 interface NewTaskModalProps {
   open: boolean;
@@ -27,23 +28,29 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
   const [blocker, setBlocker] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [assignedMembers, setAssignedMembers] = useState<User[]>([]);
+  const [addUserId, setAddUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) return;
-    if (defaultProjectId) { setProjectId(defaultProjectId); return; }
-    async function fetchProjects() {
+    async function fetchData() {
       const supabase = createClient();
-      const { data } = await supabase.from("projects").select("*").eq("status", "active").order("name");
-      if (data) setProjects(data as Project[]);
+      const [{ data: users }, { data: proj }] = await Promise.all([
+        supabase.from("users").select("*").order("name"),
+        defaultProjectId ? { data: null } : supabase.from("projects").select("*").eq("status", "active").order("name"),
+      ]);
+      if (users) setAllUsers(users as User[]);
+      if (proj) setProjects(proj as Project[]);
     }
-    fetchProjects();
+    fetchData();
   }, [open, defaultProjectId]);
 
   function reset() {
     setName(""); setProjectId(""); setDeadline(""); setPriority("medium");
-    setBlocker(""); setAttachmentUrl(""); setError("");
+    setBlocker(""); setAttachmentUrl(""); setAssignedMembers([]); setAddUserId(""); setError("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -55,7 +62,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error: insertError } = await supabase.from("tasks").insert({
+    const { data: newTask, error: insertError } = await supabase.from("tasks").insert({
       name,
       project_id: projectId,
       deadline,
@@ -64,10 +71,17 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
       attachment_url: attachmentUrl || null,
       status: defaultStatus,
       created_by: user.id,
-    });
+    }).select("id").single();
 
     setLoading(false);
     if (insertError) { setError(insertError.message); return; }
+
+    // Assign selected members
+    if (assignedMembers.length > 0 && newTask) {
+      await supabase.from("task_members").insert(
+        assignedMembers.map(m => ({ task_id: (newTask as any).id, user_id: m.id }))
+      );
+    }
 
     logActivity({ action: `Created task "${name}"`, projectId });
     reset();
@@ -132,6 +146,58 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
           <div className="space-y-2">
             <Label htmlFor="attachment">Attachment link <span className="text-muted-foreground">(optional)</span></Label>
             <Input id="attachment" type="url" placeholder="Google Drive, Figma, Docs link…" value={attachmentUrl} onChange={e => setAttachmentUrl(e.target.value)} />
+          </div>
+
+          {/* Member assignment */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <Label>Assign members <span className="text-muted-foreground">(optional)</span></Label>
+
+            {assignedMembers.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {assignedMembers.map(member => (
+                  <div key={member.id} className="flex items-center gap-1.5 bg-muted rounded-full px-3 py-1 text-sm">
+                    <span>{member.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAssignedMembers(prev => prev.filter(m => m.id !== member.id))}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {allUsers.filter(u => !assignedMembers.some(m => m.id === u.id)).length > 0 && (
+              <div className="flex gap-2">
+                <Select value={addUserId} onValueChange={(v) => v && setAddUserId(v)}>
+                  <SelectTrigger className="flex-1 h-9">
+                    <SelectValue placeholder="Add a member…">
+                      {addUserId ? allUsers.find(u => u.id === addUserId)?.name : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allUsers.filter(u => !assignedMembers.some(m => m.id === u.id)).map(u => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-9 flex-shrink-0"
+                  disabled={!addUserId}
+                  onClick={() => {
+                    const user = allUsers.find(u => u.id === addUserId);
+                    if (user) { setAssignedMembers(prev => [...prev, user]); setAddUserId(""); }
+                  }}
+                >
+                  <UserPlus size={14} /> Add
+                </Button>
+              </div>
+            )}
           </div>
 
           {error && <p className="text-sm text-status-overdue">{error}</p>}
