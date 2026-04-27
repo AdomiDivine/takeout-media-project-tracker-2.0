@@ -114,7 +114,9 @@ export default function TasksPage() {
       <div className="flex gap-3 flex-wrap">
         <Select value={projectFilter} onValueChange={setProjectFilter}>
           <SelectTrigger className="w-48 h-8 text-sm">
-            <SelectValue placeholder="All projects" />
+            <SelectValue placeholder="All projects">
+              {projectFilter !== "all" ? projects.find(p => p.id === projectFilter)?.name : undefined}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All projects</SelectItem>

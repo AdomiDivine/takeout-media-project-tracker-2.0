@@ -88,8 +88,10 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
             <div className="space-y-2">
               <Label htmlFor="project">Project *</Label>
               <Select value={projectId} onValueChange={(v) => setProjectId(v ?? "")}>
-                <SelectTrigger id="project">
-                  <SelectValue placeholder="Select a project" />
+                <SelectTrigger id="project" className="w-full">
+                  <SelectValue placeholder="Select a project">
+                    {projectId ? projects.find(p => p.id === projectId)?.name : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map(p => (
