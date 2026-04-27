@@ -1,0 +1,11 @@
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Slate tablet shape -->
+  <rect x="4" y="2" width="32" height="36" rx="5" fill="#fd4f05"/>
+  <!-- Notch at top (hanging hole of a slate) -->
+  <rect x="15" y="0" width="10" height="5" rx="2.5" fill="#fd4f05"/>
+  <rect x="16" y="1" width="8" height="3" rx="1.5" fill="#cc3e04"/>
+  <!-- Writing lines on slate -->
+  <rect x="9" y="13" width="22" height="2.5" rx="1.25" fill="white" opacity="0.9"/>
+  <rect x="9" y="19" width="18" height="2.5" rx="1.25" fill="white" opacity="0.9"/>
+  <rect x="9" y="25" width="14" height="2.5" rx="1.25" fill="white" opacity="0.9"/>
+</svg>
