@@ -13,6 +13,7 @@ interface TaskCardProps {
   onEdit?: (task: Task) => void;
   onDelete?: (task: Task) => void;
   onMarkDone?: (task: Task) => void;
+  onStatusChange?: (task: Task, status: "pending" | "in_progress" | "completed") => void;
 }
 
 const priorityStyles = {
@@ -23,7 +24,7 @@ const priorityStyles = {
 
 const priorityLabels = { high: "High", medium: "Medium", low: "Low" };
 
-export default function TaskCard({ task, onEdit, onDelete, onMarkDone }: TaskCardProps) {
+export default function TaskCard({ task, onEdit, onDelete, onMarkDone, onStatusChange }: TaskCardProps) {
   const isOverdue = task.status === "overdue";
   const showProgress = task.status === "in_progress" || task.status === "overdue";
 
@@ -40,8 +41,25 @@ export default function TaskCard({ task, onEdit, onDelete, onMarkDone }: TaskCar
             <MoreVertical size={16} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {task.status === "pending" && (
+              <DropdownMenuItem onClick={() => onStatusChange?.(task, "in_progress")}>
+                Move to In Progress
+              </DropdownMenuItem>
+            )}
+            {(task.status === "in_progress" || task.status === "overdue") && (
+              <DropdownMenuItem onClick={() => onStatusChange?.(task, "pending")}>
+                Move to Pending
+              </DropdownMenuItem>
+            )}
             {task.status !== "completed" && (
-              <DropdownMenuItem onClick={() => onMarkDone?.(task)}>Mark as done</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onMarkDone?.(task)}>
+                Mark as Done
+              </DropdownMenuItem>
+            )}
+            {task.status === "completed" && (
+              <DropdownMenuItem onClick={() => onStatusChange?.(task, "in_progress")}>
+                Reopen Task
+              </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={() => onEdit?.(task)}>Edit</DropdownMenuItem>
             <DropdownMenuItem onClick={() => onDelete?.(task)} className="text-status-overdue">Delete</DropdownMenuItem>

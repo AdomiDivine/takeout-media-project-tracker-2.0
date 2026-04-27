@@ -41,6 +41,19 @@ export default function ProjectKanban({ projectId }: { projectId: string }) {
     refetch();
   }
 
+  async function handleStatusChange(task: Task, status: "pending" | "in_progress" | "completed") {
+    const supabase = createClient();
+    await supabase
+      .from("tasks")
+      .update({
+        status,
+        completed_at: status === "completed" ? new Date().toISOString() : null,
+        progress: status === "completed" ? 100 : status === "pending" ? 0 : task.progress,
+      })
+      .eq("id", task.id);
+    refetch();
+  }
+
   function openNewTask(status: TaskStatus) {
     setNewTaskStatus(status);
     setNewTaskOpen(true);
@@ -81,6 +94,7 @@ export default function ProjectKanban({ projectId }: { projectId: string }) {
                       onMarkDone={handleMarkDone}
                       onEdit={setEditTask}
                       onDelete={handleDelete}
+                      onStatusChange={handleStatusChange}
                     />
                   ))
                 )}
