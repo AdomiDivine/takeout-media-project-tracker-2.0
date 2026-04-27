@@ -20,7 +20,7 @@ export function useTasks(projectId?: string) {
     if (projectId) query = query.eq("project_id", projectId);
 
     const { data, error } = await query;
-    if (error) console.error("[useTasks] fetch error:", error);
+    if (error) console.error("[useTasks] fetch error:", error.message, error.code, error.details, error.hint);
     if (data) setTasks(sortTasks(data as Task[]));
     setLoading(false);
   }, [projectId]);

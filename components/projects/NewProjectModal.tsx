@@ -115,13 +115,14 @@ export default function NewProjectModal({ open, onClose, onCreated }: NewProject
 
           <div className="space-y-2">
             <Label htmlFor="team-lead">Team Lead <span className="text-muted-foreground">(optional)</span></Label>
-            <Select value={teamLeadId} onValueChange={(v) => setTeamLeadId(v ?? "")}>
+            <Select value={teamLeadId || "none"} onValueChange={(v) => setTeamLeadId(v === "none" ? "" : v)}>
               <SelectTrigger id="team-lead" className="w-full">
-                <SelectValue placeholder="Select a team lead">
-                  {teamLeadId ? members.find(m => m.id === teamLeadId)?.name : undefined}
+                <SelectValue placeholder="No team lead">
+                  {teamLeadId ? members.find(m => m.id === teamLeadId)?.name : "No team lead"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">— No team lead —</SelectItem>
                 {members.map(m => (
                   <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                 ))}
