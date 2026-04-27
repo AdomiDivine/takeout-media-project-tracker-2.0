@@ -60,13 +60,15 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
   async function handleAddMember() {
     if (!addUserId || !task) return;
     setAddingMember(true);
-    const supabase = createClient();
-    const { error: insertError } = await supabase.from("task_members").insert({ task_id: task.id, user_id: addUserId });
-    if (!insertError) {
+    const res = await fetch("/api/tasks/assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: task.id, userIds: [addUserId] }),
+    });
+    if (res.ok) {
       const assigneeName = unassigned.find(u => u.id === addUserId)?.name ?? "a member";
       logActivity({ action: `Assigned ${assigneeName} to "${task.name}"`, taskId: task.id, projectId: task.project_id });
       await fetchMembersAndUsers(task.id);
-      // Fire assignment email (best-effort — don't block UI if it fails)
       fetch("/api/email/task-assigned", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,9 +81,12 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
 
   async function handleRemoveMember(userId: string) {
     if (!task) return;
-    const supabase = createClient();
-    const { error: deleteError } = await supabase.from("task_members").delete().eq("task_id", task.id).eq("user_id", userId);
-    if (!deleteError) setAssignedMembers(prev => prev.filter(m => m.id !== userId));
+    await fetch("/api/tasks/assign", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: task.id, userId }),
+    });
+    setAssignedMembers(prev => prev.filter(m => m.id !== userId));
   }
 
   async function handleSubmit(e: React.FormEvent) {

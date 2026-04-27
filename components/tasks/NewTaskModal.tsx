@@ -77,12 +77,14 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
     setLoading(false);
     if (insertError) { setError(insertError.message); return; }
 
-    // Assign selected members and send email notifications
+    // Assign selected members via service-role API (bypasses RLS)
     if (assignedMembers.length > 0 && newTask) {
       const taskId = (newTask as any).id;
-      await supabase.from("task_members").insert(
-        assignedMembers.map(m => ({ task_id: taskId, user_id: m.id }))
-      );
+      await fetch("/api/tasks/assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, userIds: assignedMembers.map(m => m.id) }),
+      });
       assignedMembers.forEach(m => {
         fetch("/api/email/task-assigned", {
           method: "POST",
