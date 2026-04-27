@@ -25,7 +25,7 @@ export function useTasks(projectId?: string) {
   useEffect(() => {
     fetchTasks();
 
-    // Keep real-time subscription to trigger refetch on any task change
+    // Realtime subscription — fires for task row changes
     const supabase = createClient();
     const channel = supabase
       .channel(channelName)
@@ -33,7 +33,14 @@ export function useTasks(projectId?: string) {
       .on("postgres_changes", { event: "*", schema: "public", table: "task_members" }, fetchTasks)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Refetch when tab becomes visible — catches assignments made while tab was in background
+    const handleVisibility = () => { if (document.visibilityState === "visible") fetchTasks(); };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [fetchTasks]);
 
   return { tasks, loading, refetch: fetchTasks };

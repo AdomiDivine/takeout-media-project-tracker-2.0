@@ -49,26 +49,29 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
 
   async function fetchMembersAndUsers(taskId: string) {
     const supabase = createClient();
-    const [{ data: members }, { data: users }] = await Promise.all([
-      supabase.from("task_members").select("user:users(*)").eq("task_id", taskId),
-      supabase.from("users").select("*").order("name"),
-    ]);
-    setAssignedMembers(((members ?? []) as any[]).map(m => m.user).filter(Boolean) as User[]);
+    // Only fetch users list via anon client (no RLS issues on users for admins)
+    const { data: users } = await supabase.from("users").select("*").order("name");
+    // Fetch task members via service-role API to bypass RLS
+    const res = await fetch(`/api/tasks/members?taskId=${taskId}`);
+    const members: User[] = res.ok ? await res.json() : [];
+    setAssignedMembers(members);
     setAllUsers((users ?? []) as User[]);
   }
 
   async function handleAddMember() {
     if (!addUserId || !task) return;
     setAddingMember(true);
+    const addedUser = allUsers.find(u => u.id === addUserId);
     const res = await fetch("/api/tasks/assign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ taskId: task.id, userIds: [addUserId] }),
     });
     if (res.ok) {
-      const assigneeName = unassigned.find(u => u.id === addUserId)?.name ?? "a member";
+      // Optimistically update UI immediately — no RLS re-fetch needed
+      if (addedUser) setAssignedMembers(prev => [...prev, addedUser]);
+      const assigneeName = addedUser?.name ?? "a member";
       logActivity({ action: `Assigned ${assigneeName} to "${task.name}"`, taskId: task.id, projectId: task.project_id });
-      await fetchMembersAndUsers(task.id);
       fetch("/api/email/task-assigned", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,12 +84,13 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
 
   async function handleRemoveMember(userId: string) {
     if (!task) return;
+    // Optimistically remove from UI immediately
+    setAssignedMembers(prev => prev.filter(m => m.id !== userId));
     await fetch("/api/tasks/assign", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ taskId: task.id, userId }),
     });
-    setAssignedMembers(prev => prev.filter(m => m.id !== userId));
   }
 
   async function handleSubmit(e: React.FormEvent) {
