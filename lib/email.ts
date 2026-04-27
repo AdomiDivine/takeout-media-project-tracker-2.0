@@ -11,7 +11,7 @@ export async function sendEmail({
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
-    from: "TM Slate <onboarding@resend.dev>",
+    from: "TM Slate <noreply@takeoutmedia.foundation>",
     to,
     subject,
     html,
