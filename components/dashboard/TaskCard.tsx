@@ -1,9 +1,10 @@
 "use client";
 
-import { Calendar, MoreVertical, User } from "lucide-react";
+import { Calendar, MoreVertical, User, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types";
@@ -14,6 +15,7 @@ interface TaskCardProps {
   onDelete?: (task: Task) => void;
   onMarkDone?: (task: Task) => void;
   onStatusChange?: (task: Task, status: "pending" | "in_progress" | "completed") => void;
+  onProgressChange?: (task: Task, progress: number) => void;
 }
 
 const priorityStyles = {
@@ -24,18 +26,51 @@ const priorityStyles = {
 
 const priorityLabels = { high: "High", medium: "Medium", low: "Low" };
 
-export default function TaskCard({ task, onEdit, onDelete, onMarkDone, onStatusChange }: TaskCardProps) {
+export default function TaskCard({ task, onEdit, onDelete, onMarkDone, onStatusChange, onProgressChange }: TaskCardProps) {
   const isOverdue = task.status === "overdue";
   const showProgress = task.status === "in_progress" || task.status === "overdue";
 
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.id,
+    data: { task },
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    onProgressChange?.(task, Math.max(0, Math.min(100, pct)));
+  }
+
   return (
-    <div className={cn(
-      "bg-card border rounded-lg p-4 space-y-3 hover:border-border/80 transition-colors",
-      isOverdue ? "border-status-overdue/50" : "border-border"
-    )}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "bg-card border rounded-lg p-4 space-y-3 transition-colors",
+        isOverdue ? "border-status-overdue/50" : "border-border",
+        isDragging ? "shadow-lg" : "hover:border-border/80"
+      )}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
-        <p className="font-semibold text-sm leading-tight line-clamp-2">{task.name}</p>
+        {/* Drag handle */}
+        <button
+          {...listeners}
+          {...attributes}
+          className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 mt-0.5 outline-none"
+          tabIndex={-1}
+        >
+          <GripVertical size={14} />
+        </button>
+
+        <p className="font-semibold text-sm leading-tight line-clamp-2 flex-1">{task.name}</p>
+
         <DropdownMenu>
           <DropdownMenuTrigger className="text-muted-foreground hover:text-foreground flex-shrink-0 outline-none">
             <MoreVertical size={16} />
@@ -97,14 +132,24 @@ export default function TaskCard({ task, onEdit, onDelete, onMarkDone, onStatusC
         </p>
       )}
 
-      {/* Progress bar */}
+      {/* Clickable progress bar */}
       {showProgress && (
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Progress</span>
             <span>{task.progress}%</span>
           </div>
-          <Progress value={task.progress} className="h-1.5" />
+          <div
+            className="h-2 rounded-full bg-muted cursor-pointer group relative overflow-hidden"
+            onClick={handleProgressClick}
+            title="Click to set progress"
+          >
+            <div
+              className="h-full rounded-full bg-brand transition-all pointer-events-none"
+              style={{ width: `${task.progress}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground/60">Click bar to update</p>
         </div>
       )}
     </div>
