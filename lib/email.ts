@@ -1,14 +1,6 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GOOGLE_SMTP_USER,
-    pass: process.env.GOOGLE_SMTP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendEmail({
   to,
@@ -19,10 +11,12 @@ export async function sendEmail({
   subject: string;
   html: string;
 }) {
-  await transporter.sendMail({
-    from: `"TM Slate" <${process.env.GOOGLE_SMTP_USER}>`,
+  const { error } = await resend.emails.send({
+    from: "TM Slate <notifications@your-domain.com>",
     to,
     subject,
     html,
   });
+
+  if (error) throw new Error(error.message);
 }
