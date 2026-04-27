@@ -14,17 +14,6 @@ export function useTaskStats() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // All active tasks for this user (created or assigned)
-    const { data: tasks } = await supabase
-      .from("tasks")
-      .select("*, project:projects(name)")
-      .is("deleted_at", null)
-      .or(`created_by.eq.${user.id},id.in.(${
-        // We fetch task_members separately to avoid a complex join
-        "select task_id from task_members where user_id = '" + user.id + "'"
-      })`);
-
-    // Simpler: just fetch tasks created by or assigned to user via separate queries
     const { data: createdTasks } = await supabase
       .from("tasks")
       .select("*, project:projects(name)")

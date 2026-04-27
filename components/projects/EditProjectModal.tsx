@@ -113,8 +113,10 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
           <div className="space-y-2">
             <Label htmlFor="edit-team-lead">Team Lead <span className="text-muted-foreground">(optional)</span></Label>
             <Select value={teamLeadId} onValueChange={(v) => setTeamLeadId(v ?? "")}>
-              <SelectTrigger id="edit-team-lead">
-                <SelectValue placeholder="Select a team lead" />
+              <SelectTrigger id="edit-team-lead" className="w-full">
+                <SelectValue placeholder="Select a team lead">
+                  {teamLeadId ? members.find(m => m.id === teamLeadId)?.name : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {members.map(m => (

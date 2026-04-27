@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity";
 import type { Project, TaskPriority, TaskStatus } from "@/types";
 
 interface NewTaskModalProps {
@@ -68,6 +69,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
     setLoading(false);
     if (insertError) { setError(insertError.message); return; }
 
+    logActivity({ action: `Created task "${name}"`, projectId });
     reset();
     onCreated();
   }

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity";
 import type { Task, TaskPriority, TaskStatus, User } from "@/types";
 
 interface EditTaskModalProps {
@@ -62,6 +63,8 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
     const supabase = createClient();
     const { error: insertError } = await supabase.from("task_members").insert({ task_id: task.id, user_id: addUserId });
     if (!insertError) {
+      const assigneeName = unassigned.find(u => u.id === addUserId)?.name ?? "a member";
+      logActivity({ action: `Assigned ${assigneeName} to "${task.name}"`, taskId: task.id, projectId: task.project_id });
       await fetchMembersAndUsers(task.id);
       // Fire assignment email (best-effort — don't block UI if it fails)
       fetch("/api/email/task-assigned", {
@@ -100,6 +103,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
 
     setLoading(false);
     if (updateError) { setError(updateError.message); return; }
+    logActivity({ action: `Updated task "${name}"`, taskId: task.id, projectId: task.project_id });
     onUpdated();
   }
 

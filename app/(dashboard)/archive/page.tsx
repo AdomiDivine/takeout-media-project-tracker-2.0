@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Archive, FolderOpen, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { format } from "date-fns";
 import type { Project } from "@/types";
 
 export default function ArchivePage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState("");
@@ -36,6 +38,7 @@ export default function ArchivePage() {
     const supabase = createClient();
     await supabase.from("projects").update({ status: "active" }).eq("id", id);
     await fetchData();
+    router.refresh();
     setRestoring(null);
   }
 

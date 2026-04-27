@@ -7,6 +7,7 @@ import TaskCard from "./TaskCard";
 import NewTaskModal from "@/components/tasks/NewTaskModal";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
 import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity";
 import { useTasks } from "@/lib/hooks/useTasks";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable } from "@dnd-kit/core";
 import { startOfWeek, addDays, isSameDay, format } from "date-fns";
@@ -67,6 +68,7 @@ export default function KanbanBoard() {
     await supabase.from("tasks")
       .update({ status: "completed", completed_at: new Date().toISOString(), progress: 100 })
       .eq("id", task.id);
+    logActivity({ action: `Marked "${task.name}" as completed`, taskId: task.id, projectId: task.project_id });
     refetch();
   }
 
@@ -75,6 +77,7 @@ export default function KanbanBoard() {
     await supabase.from("tasks")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", task.id);
+    logActivity({ action: `Deleted task "${task.name}"`, projectId: task.project_id });
     refetch();
   }
 
@@ -85,6 +88,7 @@ export default function KanbanBoard() {
       completed_at: status === "completed" ? new Date().toISOString() : null,
       progress: status === "completed" ? 100 : status === "pending" ? 0 : task.progress,
     }).eq("id", task.id);
+    logActivity({ action: `Moved "${task.name}" to ${status.replace("_", " ")}`, taskId: task.id, projectId: task.project_id });
     refetch();
   }
 
@@ -120,6 +124,7 @@ export default function KanbanBoard() {
       completed_at: newStatus === "completed" ? new Date().toISOString() : null,
       progress: newStatus === "completed" ? 100 : newStatus === "pending" ? 0 : task.progress,
     }).eq("id", task.id);
+    logActivity({ action: `Moved "${task.name}" to ${newStatus.replace("_", " ")}`, taskId: task.id, projectId: task.project_id });
     refetch();
   }
 

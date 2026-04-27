@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageUpload from "@/components/ui/image-upload";
 import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity";
 import type { User } from "@/types";
 
 interface NewProjectModalProps {
@@ -66,6 +67,7 @@ export default function NewProjectModal({ open, onClose, onCreated }: NewProject
 
     setLoading(false);
     if (insertError) { setError(insertError.message); return; }
+    logActivity({ action: `Created project "${name}"` });
     reset(); onCreated();
   }
 
@@ -114,8 +116,10 @@ export default function NewProjectModal({ open, onClose, onCreated }: NewProject
           <div className="space-y-2">
             <Label htmlFor="team-lead">Team Lead <span className="text-muted-foreground">(optional)</span></Label>
             <Select value={teamLeadId} onValueChange={(v) => setTeamLeadId(v ?? "")}>
-              <SelectTrigger id="team-lead">
-                <SelectValue placeholder="Select a team lead" />
+              <SelectTrigger id="team-lead" className="w-full">
+                <SelectValue placeholder="Select a team lead">
+                  {teamLeadId ? members.find(m => m.id === teamLeadId)?.name : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {members.map(m => (
