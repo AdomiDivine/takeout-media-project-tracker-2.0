@@ -63,6 +63,12 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
     const { error: insertError } = await supabase.from("task_members").insert({ task_id: task.id, user_id: addUserId });
     if (!insertError) {
       await fetchMembersAndUsers(task.id);
+      // Fire assignment email (best-effort — don't block UI if it fails)
+      fetch("/api/email/task-assigned", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: task.id, assignedUserId: addUserId }),
+      }).catch(() => {});
       setAddUserId("");
     }
     setAddingMember(false);
