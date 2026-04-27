@@ -197,7 +197,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
 
             {unassigned.length > 0 && (
               <div className="flex gap-2">
-                <Select value={addUserId} onValueChange={setAddUserId}>
+                <Select value={addUserId} onValueChange={(v) => v && setAddUserId(v)}>
                   <SelectTrigger className="flex-1 h-9">
                     <SelectValue placeholder="Add a member…">
                       {addUserId ? unassigned.find(u => u.id === addUserId)?.name : undefined}

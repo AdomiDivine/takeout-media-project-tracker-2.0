@@ -112,7 +112,7 @@ export default function TasksPage() {
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
-        <Select value={projectFilter} onValueChange={setProjectFilter}>
+        <Select value={projectFilter} onValueChange={(v) => v && setProjectFilter(v)}>
           <SelectTrigger className="w-48 h-8 text-sm">
             <SelectValue placeholder="All projects">
               {projectFilter !== "all" ? projects.find(p => p.id === projectFilter)?.name : undefined}
@@ -124,7 +124,7 @@ export default function TasksPage() {
           </SelectContent>
         </Select>
 
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+        <Select value={priorityFilter} onValueChange={(v) => v && setPriorityFilter(v)}>
           <SelectTrigger className="w-36 h-8 text-sm">
             <SelectValue placeholder="All priorities" />
           </SelectTrigger>
