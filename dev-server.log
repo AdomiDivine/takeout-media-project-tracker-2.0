@@ -6,10 +6,10 @@
 - Local:         http://localhost:3000
 - Network:       http://192.168.100.66:3000
 - Environments: .env.local
-✓ Ready in 538ms
+✓ Ready in 581ms
 
- GET /dashboard 200 in 2.4s (next.js: 158ms, proxy.ts: 985ms, application-code: 1259ms)
- GET /dashboard 200 in 1108ms (next.js: 9ms, proxy.ts: 461ms, application-code: 638ms)
+ GET /dashboard 200 in 2.2s (next.js: 219ms, proxy.ts: 922ms, application-code: 1015ms)
+ GET /dashboard 200 in 842ms (next.js: 4ms, proxy.ts: 186ms, application-code: 652ms)
 [browser] The width(-1) and height(-1) of chart should be greater than 0,
        please check the style of container, or the props width(100%) and height(100%),
        or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
@@ -26,22 +26,6 @@
        please check the style of container, or the props width(100%) and height(100%),
        or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
        height and width.
-✓ Compiled in 130ms
- GET /dashboard 200 in 949ms (next.js: 105ms, proxy.ts: 726ms, application-code: 119ms)
- GET /dashboard 200 in 254ms (next.js: 5ms, proxy.ts: 177ms, application-code: 73ms)
- GET /dashboard 200 in 246ms (next.js: 6ms, proxy.ts: 172ms, application-code: 69ms)
- GET /dashboard 200 in 245ms (next.js: 4ms, proxy.ts: 172ms, application-code: 69ms)
- GET /dashboard 200 in 254ms (next.js: 4ms, proxy.ts: 175ms, application-code: 74ms)
- GET /dashboard 200 in 306ms (next.js: 5ms, proxy.ts: 211ms, application-code: 89ms)
-✓ Compiled in 87ms
- GET /dashboard 200 in 401ms (next.js: 95ms, proxy.ts: 208ms, application-code: 97ms)
- GET /dashboard 200 in 283ms (next.js: 14ms, proxy.ts: 187ms, application-code: 82ms)
- GET /dashboard 200 in 313ms (next.js: 11ms, proxy.ts: 172ms, application-code: 130ms)
- GET /dashboard 200 in 246ms (next.js: 6ms, proxy.ts: 172ms, application-code: 68ms)
- GET /dashboard 200 in 249ms (next.js: 7ms, proxy.ts: 175ms, application-code: 67ms)
- GET /dashboard 200 in 245ms (next.js: 4ms, proxy.ts: 172ms, application-code: 69ms)
- GET /dashboard 200 in 380ms (next.js: 79ms, proxy.ts: 217ms, application-code: 84ms)
- GET /dashboard 200 in 248ms (next.js: 4ms, proxy.ts: 177ms, application-code: 67ms)
 [browser] The width(-1) and height(-1) of chart should be greater than 0,
        please check the style of container, or the props width(100%) and height(100%),
        or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
@@ -58,154 +42,23 @@
        please check the style of container, or the props width(100%) and height(100%),
        or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
        height and width.
- GET /dashboard 200 in 1103ms (next.js: 68ms, proxy.ts: 953ms, application-code: 82ms)
- GET /dashboard 200 in 262ms (next.js: 5ms, proxy.ts: 176ms, application-code: 81ms)
- GET /dashboard 200 in 241ms (next.js: 3ms, proxy.ts: 169ms, application-code: 68ms)
- GET /dashboard 200 in 229ms (next.js: 4ms, proxy.ts: 168ms, application-code: 57ms)
- GET /dashboard 200 in 240ms (next.js: 3ms, proxy.ts: 174ms, application-code: 63ms)
- GET /dashboard 200 in 230ms (next.js: 3ms, proxy.ts: 173ms, application-code: 54ms)
- GET /dashboard 200 in 232ms (next.js: 3ms, proxy.ts: 169ms, application-code: 60ms)
- GET /dashboard 200 in 258ms (next.js: 14ms, proxy.ts: 173ms, application-code: 70ms)
- GET /dashboard 200 in 236ms (next.js: 8ms, proxy.ts: 169ms, application-code: 59ms)
- GET /dashboard 200 in 251ms (next.js: 4ms, proxy.ts: 188ms, application-code: 59ms)
- GET /dashboard 200 in 256ms (next.js: 11ms, proxy.ts: 183ms, application-code: 61ms)
- GET /dashboard 200 in 247ms (next.js: 8ms, proxy.ts: 169ms, application-code: 71ms)
- GET /dashboard 200 in 261ms (next.js: 15ms, proxy.ts: 181ms, application-code: 66ms)
- GET /dashboard 200 in 230ms (next.js: 3ms, proxy.ts: 167ms, application-code: 60ms)
- GET /dashboard 200 in 227ms (next.js: 4ms, proxy.ts: 171ms, application-code: 53ms)
- GET /dashboard 200 in 237ms (next.js: 10ms, proxy.ts: 172ms, application-code: 55ms)
- GET /dashboard 200 in 235ms (next.js: 4ms, proxy.ts: 168ms, application-code: 63ms)
- GET /dashboard 200 in 237ms (next.js: 6ms, proxy.ts: 175ms, application-code: 56ms)
- GET /dashboard 200 in 224ms (next.js: 4ms, proxy.ts: 166ms, application-code: 55ms)
- GET /dashboard 200 in 227ms (next.js: 5ms, proxy.ts: 167ms, application-code: 56ms)
- GET /dashboard 200 in 247ms (next.js: 10ms, proxy.ts: 169ms, application-code: 68ms)
- GET /dashboard 200 in 225ms (next.js: 3ms, proxy.ts: 167ms, application-code: 55ms)
- GET /dashboard 200 in 261ms (next.js: 13ms, proxy.ts: 177ms, application-code: 71ms)
- GET /dashboard 200 in 254ms (next.js: 10ms, proxy.ts: 172ms, application-code: 71ms)
- GET /dashboard 200 in 230ms (next.js: 4ms, proxy.ts: 168ms, application-code: 58ms)
- GET /dashboard 200 in 232ms (next.js: 3ms, proxy.ts: 177ms, application-code: 53ms)
- GET /dashboard 200 in 234ms (next.js: 7ms, proxy.ts: 166ms, application-code: 60ms)
- GET /dashboard 200 in 239ms (next.js: 4ms, proxy.ts: 176ms, application-code: 60ms)
- GET /dashboard 200 in 249ms (next.js: 9ms, proxy.ts: 169ms, application-code: 71ms)
- GET /dashboard 200 in 306ms (next.js: 3ms, proxy.ts: 249ms, application-code: 53ms)
- GET /dashboard 200 in 379ms (next.js: 4ms, proxy.ts: 320ms, application-code: 54ms)
- GET /dashboard 200 in 392ms (next.js: 4ms, proxy.ts: 329ms, application-code: 59ms)
- GET /dashboard 200 in 383ms (next.js: 10ms, proxy.ts: 314ms, application-code: 59ms)
- GET /dashboard 200 in 388ms (next.js: 4ms, proxy.ts: 329ms, application-code: 55ms)
- GET /dashboard 200 in 382ms (next.js: 4ms, proxy.ts: 311ms, application-code: 66ms)
- GET /dashboard 200 in 395ms (next.js: 8ms, proxy.ts: 329ms, application-code: 57ms)
- GET /dashboard 200 in 407ms (next.js: 13ms, proxy.ts: 332ms, application-code: 63ms)
- GET /dashboard 200 in 359ms (next.js: 7ms, proxy.ts: 296ms, application-code: 55ms)
- GET /dashboard 200 in 409ms (next.js: 11ms, proxy.ts: 332ms, application-code: 66ms)
- GET /dashboard 200 in 360ms (next.js: 5ms, proxy.ts: 298ms, application-code: 57ms)
- GET /dashboard 200 in 365ms (next.js: 5ms, proxy.ts: 300ms, application-code: 60ms)
- GET /dashboard 200 in 388ms (next.js: 12ms, proxy.ts: 294ms, application-code: 82ms)
- GET /dashboard 200 in 411ms (next.js: 15ms, proxy.ts: 312ms, application-code: 83ms)
- GET /dashboard 200 in 403ms (next.js: 11ms, proxy.ts: 330ms, application-code: 62ms)
- GET /dashboard 200 in 406ms (next.js: 11ms, proxy.ts: 328ms, application-code: 67ms)
- GET /dashboard 200 in 376ms (next.js: 3ms, proxy.ts: 320ms, application-code: 53ms)
- GET /dashboard 200 in 231ms (next.js: 4ms, proxy.ts: 174ms, application-code: 54ms)
- GET /dashboard 200 in 249ms (next.js: 12ms, proxy.ts: 171ms, application-code: 65ms)
- GET /dashboard 200 in 253ms (next.js: 7ms, proxy.ts: 172ms, application-code: 74ms)
- GET /dashboard 200 in 238ms (next.js: 8ms, proxy.ts: 172ms, application-code: 58ms)
- GET /dashboard 200 in 227ms (next.js: 4ms, proxy.ts: 165ms, application-code: 58ms)
- GET /dashboard 200 in 307ms (next.js: 4ms, proxy.ts: 167ms, application-code: 137ms)
- GET /dashboard 200 in 303ms (next.js: 5ms, proxy.ts: 224ms, application-code: 74ms)
- GET /dashboard 200 in 381ms (next.js: 83ms, proxy.ts: 168ms, application-code: 130ms)
- GET /dashboard 200 in 279ms (next.js: 4ms, proxy.ts: 209ms, application-code: 66ms)
- GET /dashboard 200 in 243ms (next.js: 5ms, proxy.ts: 170ms, application-code: 68ms)
- GET /dashboard 200 in 229ms (next.js: 3ms, proxy.ts: 168ms, application-code: 58ms)
- GET /dashboard 200 in 237ms (next.js: 5ms, proxy.ts: 166ms, application-code: 66ms)
- GET /dashboard 200 in 239ms (next.js: 3ms, proxy.ts: 166ms, application-code: 70ms)
- GET /dashboard 200 in 258ms (next.js: 6ms, proxy.ts: 192ms, application-code: 59ms)
- GET /dashboard 200 in 388ms (next.js: 4ms, proxy.ts: 324ms, application-code: 61ms)
- GET /dashboard 200 in 299ms (next.js: 8ms, proxy.ts: 227ms, application-code: 64ms)
- GET /dashboard 200 in 228ms (next.js: 4ms, proxy.ts: 166ms, application-code: 59ms)
- GET /dashboard 200 in 233ms (next.js: 7ms, proxy.ts: 168ms, application-code: 58ms)
- GET /dashboard 200 in 224ms (next.js: 3ms, proxy.ts: 169ms, application-code: 52ms)
- GET /dashboard 200 in 225ms (next.js: 5ms, proxy.ts: 165ms, application-code: 55ms)
- GET /dashboard 200 in 222ms (next.js: 3ms, proxy.ts: 164ms, application-code: 55ms)
- GET /dashboard 200 in 230ms (next.js: 5ms, proxy.ts: 165ms, application-code: 61ms)
- GET /dashboard 200 in 246ms (next.js: 5ms, proxy.ts: 170ms, application-code: 72ms)
- GET /dashboard 200 in 231ms (next.js: 5ms, proxy.ts: 167ms, application-code: 59ms)
- GET /dashboard 200 in 225ms (next.js: 4ms, proxy.ts: 165ms, application-code: 56ms)
- GET /dashboard 200 in 239ms (next.js: 7ms, proxy.ts: 171ms, application-code: 61ms)
- GET /dashboard 200 in 223ms (next.js: 4ms, proxy.ts: 165ms, application-code: 55ms)
- GET /dashboard 200 in 252ms (next.js: 8ms, proxy.ts: 175ms, application-code: 69ms)
- GET /dashboard 200 in 227ms (next.js: 3ms, proxy.ts: 169ms, application-code: 55ms)
- GET /dashboard 200 in 235ms (next.js: 3ms, proxy.ts: 164ms, application-code: 67ms)
- GET /dashboard 200 in 224ms (next.js: 4ms, proxy.ts: 167ms, application-code: 53ms)
- GET /dashboard 200 in 229ms (next.js: 5ms, proxy.ts: 171ms, application-code: 54ms)
- GET /dashboard 200 in 234ms (next.js: 5ms, proxy.ts: 171ms, application-code: 57ms)
- GET /dashboard 200 in 235ms (next.js: 3ms, proxy.ts: 178ms, application-code: 54ms)
- GET /dashboard 200 in 229ms (next.js: 5ms, proxy.ts: 168ms, application-code: 56ms)
- GET /dashboard 200 in 229ms (next.js: 6ms, proxy.ts: 168ms, application-code: 54ms)
- GET /dashboard 200 in 236ms (next.js: 5ms, proxy.ts: 164ms, application-code: 68ms)
- GET /dashboard 200 in 226ms (next.js: 4ms, proxy.ts: 167ms, application-code: 56ms)
- GET /dashboard 200 in 230ms (next.js: 3ms, proxy.ts: 166ms, application-code: 61ms)
- GET /dashboard 200 in 226ms (next.js: 3ms, proxy.ts: 166ms, application-code: 56ms)
- GET /dashboard 200 in 232ms (next.js: 6ms, proxy.ts: 170ms, application-code: 56ms)
- GET /dashboard 200 in 234ms (next.js: 7ms, proxy.ts: 165ms, application-code: 63ms)
- GET /dashboard 200 in 238ms (next.js: 7ms, proxy.ts: 168ms, application-code: 63ms)
- GET /dashboard 200 in 236ms (next.js: 4ms, proxy.ts: 169ms, application-code: 63ms)
- GET /dashboard 200 in 226ms (next.js: 3ms, proxy.ts: 165ms, application-code: 58ms)
- GET /dashboard 200 in 228ms (next.js: 4ms, proxy.ts: 170ms, application-code: 55ms)
- GET /dashboard 200 in 240ms (next.js: 4ms, proxy.ts: 165ms, application-code: 72ms)
- GET /dashboard 200 in 246ms (next.js: 3ms, proxy.ts: 170ms, application-code: 73ms)
- GET /dashboard 200 in 232ms (next.js: 4ms, proxy.ts: 169ms, application-code: 60ms)
- GET /dashboard 200 in 238ms (next.js: 5ms, proxy.ts: 167ms, application-code: 66ms)
- GET /dashboard 200 in 233ms (next.js: 3ms, proxy.ts: 166ms, application-code: 64ms)
- GET /dashboard 200 in 226ms (next.js: 3ms, proxy.ts: 163ms, application-code: 60ms)
- GET /dashboard 200 in 232ms (next.js: 4ms, proxy.ts: 170ms, application-code: 58ms)
- GET /dashboard 200 in 227ms (next.js: 4ms, proxy.ts: 164ms, application-code: 59ms)
-✓ Compiled in 175ms
- GET /dashboard 200 in 685ms (next.js: 365ms, proxy.ts: 178ms, application-code: 142ms)
- GET /dashboard 200 in 293ms (next.js: 13ms, proxy.ts: 208ms, application-code: 72ms)
- GET /dashboard 200 in 240ms (next.js: 3ms, proxy.ts: 168ms, application-code: 68ms)
- GET /dashboard 200 in 238ms (next.js: 3ms, proxy.ts: 165ms, application-code: 70ms)
- GET /dashboard 200 in 235ms (next.js: 5ms, proxy.ts: 170ms, application-code: 61ms)
- GET /dashboard 200 in 228ms (next.js: 5ms, proxy.ts: 165ms, application-code: 59ms)
- GET /dashboard 200 in 240ms (next.js: 5ms, proxy.ts: 168ms, application-code: 67ms)
- GET /dashboard 200 in 252ms (next.js: 14ms, proxy.ts: 175ms, application-code: 63ms)
- GET /dashboard 200 in 255ms (next.js: 7ms, proxy.ts: 176ms, application-code: 72ms)
- GET /dashboard 200 in 233ms (next.js: 3ms, proxy.ts: 167ms, application-code: 63ms)
- GET /dashboard 200 in 231ms (next.js: 4ms, proxy.ts: 166ms, application-code: 61ms)
- GET /dashboard 200 in 246ms (next.js: 10ms, proxy.ts: 167ms, application-code: 69ms)
- GET /dashboard 200 in 251ms (next.js: 7ms, proxy.ts: 171ms, application-code: 73ms)
- GET /dashboard 200 in 249ms (next.js: 4ms, proxy.ts: 172ms, application-code: 73ms)
- GET /dashboard 200 in 244ms (next.js: 7ms, proxy.ts: 169ms, application-code: 68ms)
- GET /dashboard 200 in 309ms (next.js: 5ms, proxy.ts: 168ms, application-code: 136ms)
- GET /dashboard 200 in 260ms (next.js: 3ms, proxy.ts: 174ms, application-code: 83ms)
- GET /dashboard 200 in 298ms (next.js: 7ms, proxy.ts: 168ms, application-code: 123ms)
- GET /dashboard 200 in 257ms (next.js: 5ms, proxy.ts: 171ms, application-code: 80ms)
- GET /dashboard 200 in 296ms (next.js: 18ms, proxy.ts: 180ms, application-code: 99ms)
- GET /dashboard 200 in 264ms (next.js: 6ms, proxy.ts: 171ms, application-code: 86ms)
- GET /dashboard 200 in 263ms (next.js: 12ms, proxy.ts: 180ms, application-code: 72ms)
- GET /dashboard 200 in 294ms (next.js: 50ms, proxy.ts: 168ms, application-code: 76ms)
- GET /dashboard 200 in 279ms (next.js: 16ms, proxy.ts: 182ms, application-code: 81ms)
- GET /dashboard 200 in 236ms (next.js: 4ms, proxy.ts: 165ms, application-code: 67ms)
- GET /dashboard 200 in 251ms (next.js: 8ms, proxy.ts: 178ms, application-code: 65ms)
- GET /dashboard 200 in 360ms (next.js: 6ms, proxy.ts: 288ms, application-code: 65ms)
- GET /dashboard 200 in 529ms (next.js: 3ms, proxy.ts: 459ms, application-code: 66ms)
- GET /dashboard 200 in 575ms (next.js: 4ms, proxy.ts: 510ms, application-code: 61ms)
- GET /dashboard 200 in 251ms (next.js: 5ms, proxy.ts: 168ms, application-code: 78ms)
- GET /dashboard 200 in 2.1s (next.js: 7ms, proxy.ts: 801ms, application-code: 1316ms)
-  Reload env: .env.local
-[browser] The width(-1) and height(-1) of chart should be greater than 0,
-       please check the style of container, or the props width(100%) and height(100%),
-       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
-       height and width.
-[browser] The width(-1) and height(-1) of chart should be greater than 0,
-       please check the style of container, or the props width(100%) and height(100%),
-       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
-       height and width.
-[browser] The width(-1) and height(-1) of chart should be greater than 0,
-       please check the style of container, or the props width(100%) and height(100%),
-       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
-       height and width.
-[browser] The width(-1) and height(-1) of chart should be greater than 0,
-       please check the style of container, or the props width(100%) and height(100%),
-       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
-       height and width.
- GET /dashboard 200 in 371ms (next.js: 59ms, proxy.ts: 239ms, application-code: 73ms)
- GET /dashboard 200 in 251ms (next.js: 4ms, proxy.ts: 171ms, application-code: 76ms)
+ GET /tasks 200 in 1915ms (next.js: 97ms, proxy.ts: 1782ms, application-code: 37ms)
+ GET /calendar 200 in 838ms (next.js: 76ms, proxy.ts: 732ms, application-code: 30ms)
+ GET /activity 200 in 974ms (next.js: 66ms, proxy.ts: 879ms, application-code: 30ms)
+ GET /reports 200 in 433ms (next.js: 65ms, proxy.ts: 339ms, application-code: 30ms)
+ GET /archive 200 in 431ms (next.js: 67ms, proxy.ts: 342ms, application-code: 22ms)
+ GET /dashboard 200 in 1063ms (next.js: 23ms, proxy.ts: 693ms, application-code: 347ms)
+ GET /login 200 in 625ms (next.js: 313ms, proxy.ts: 54ms, application-code: 258ms)
+ GET /login 200 in 298ms (next.js: 39ms, proxy.ts: 55ms, application-code: 204ms)
+ GET /signup 200 in 276ms (next.js: 156ms, proxy.ts: 17ms, application-code: 104ms)
+ GET /login 200 in 215ms (next.js: 33ms, proxy.ts: 32ms, application-code: 150ms)
+ GET /login 200 in 82ms (next.js: 7ms, proxy.ts: 8ms, application-code: 67ms)
+ GET /dashboard 200 in 1172ms (next.js: 6ms, proxy.ts: 293ms, application-code: 873ms)
+ GET /dashboard 200 in 2.3s (next.js: 12ms, proxy.ts: 911ms, application-code: 1390ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 1561ms (next.js: 909ms, proxy.ts: 618ms, application-code: 34ms)
+ GET /dashboard 200 in 909ms (next.js: 6ms, proxy.ts: 582ms, application-code: 320ms)
+ GET /projects/eadc1b22-2f43-434c-9146-a10c825d14b1 200 in 909ms (next.js: 23ms, proxy.ts: 852ms, application-code: 34ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 605ms (next.js: 18ms, proxy.ts: 526ms, application-code: 62ms)
+✓ Compiled in 385ms
+ GET /dashboard 200 in 1718ms (next.js: 354ms, proxy.ts: 1265ms, application-code: 98ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 2.2s (next.js: 589ms, proxy.ts: 1424ms, application-code: 155ms)

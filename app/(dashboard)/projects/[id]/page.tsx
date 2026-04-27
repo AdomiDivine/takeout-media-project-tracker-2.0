@@ -99,22 +99,22 @@ export default function ProjectPage() {
       </button>
 
       {/* Project header card */}
-      <div className="max-w-sm bg-card border border-border rounded-xl overflow-hidden">
-        {/* Cover image */}
-        {project.avatar_url ? (
-          <div className="aspect-[4/3] overflow-hidden">
-            <img src={project.avatar_url} alt={project.name} className="w-full h-full object-contain bg-muted" />
-          </div>
-        ) : (
-          <div className="aspect-[4/3] bg-brand/10 flex items-center justify-center">
-            <FolderOpen size={40} className="text-brand/30" />
-          </div>
-        )}
+      <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4">
+        {/* Avatar */}
+        <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-border bg-brand/10">
+          {project.avatar_url ? (
+            <img src={project.avatar_url} alt={project.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <FolderOpen size={24} className="text-brand/30" />
+            </div>
+          )}
+        </div>
 
-        {/* Project info */}
-        <div className="p-4 flex items-start justify-between gap-3">
-          <div className="space-y-1 min-w-0">
-            <h2 className="text-lg font-bold leading-tight">{project.name}</h2>
+        {/* Info */}
+        <div className="flex-1 min-w-0 flex items-start justify-between gap-4">
+          <div className="space-y-0.5 min-w-0">
+            <h2 className="text-xl font-bold leading-tight">{project.name}</h2>
             {project.description && (
               <p className="text-sm text-muted-foreground leading-relaxed">{project.description}</p>
             )}
@@ -124,12 +124,12 @@ export default function ProjectPage() {
             </p>
           </div>
 
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Badge variant="outline" className="text-[10px] text-status-completed border-status-completed/30 bg-status-completed/10">
               Active
             </Badge>
             {canManage && (
-              <div className="flex gap-1.5">
+              <>
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={() => setEditOpen(true)}>
                   <Pencil size={12} /> Edit
                 </Button>
@@ -140,7 +140,7 @@ export default function ProjectPage() {
                   <Archive size={12} />
                   {archiving ? "Archiving…" : "Archive"}
                 </Button>
-              </div>
+              </>
             )}
           </div>
         </div>
