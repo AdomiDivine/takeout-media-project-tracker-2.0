@@ -288,3 +288,137 @@
  GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 753ms (next.js: 112ms, proxy.ts: 547ms, application-code: 94ms)
 ✓ Compiled in 144ms
  GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 865ms (next.js: 141ms, proxy.ts: 622ms, application-code: 102ms)
+ GET /dashboard 200 in 1112ms (next.js: 233ms, proxy.ts: 622ms, application-code: 257ms)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+ GET /dashboard 200 in 1668ms (next.js: 6ms, proxy.ts: 526ms, application-code: 1137ms)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 1057ms (next.js: 15ms, proxy.ts: 1012ms, application-code: 29ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 1285ms (next.js: 18ms, proxy.ts: 478ms, application-code: 789ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 1203ms (next.js: 111ms, proxy.ts: 1001ms, application-code: 91ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 460ms (next.js: 123ms, proxy.ts: 252ms, application-code: 85ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 721ms (next.js: 107ms, proxy.ts: 528ms, application-code: 87ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 707ms (next.js: 119ms, proxy.ts: 497ms, application-code: 91ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 259ms (next.js: 6ms, proxy.ts: 175ms, application-code: 78ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 230ms (next.js: 6ms, proxy.ts: 173ms, application-code: 52ms)
+✓ Compiled in 213ms
+⨯ ./app/(dashboard)/projects/[id]/page.tsx:176:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  [90m174 |[0m     </div>
+  [90m175 |[0m   );
+[31m[1m>[0m [90m176 |[0m }
+  [90m    |[0m [31m[1m^[0m
+  [90m177 |[0m
+
+Parsing ecmascript source code failed
+
+
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 500 in 1010ms (next.js: 198ms, proxy.ts: 556ms, application-code: 257ms)
+⨯ ./app/(dashboard)/projects/[id]/page.tsx:176:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  [90m174 |[0m     </div>
+  [90m175 |[0m   );
+[31m[1m>[0m [90m176 |[0m }
+  [90m    |[0m [31m[1m^[0m
+  [90m177 |[0m
+
+Parsing ecmascript source code failed
+
+
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 500 in 196ms (next.js: 20ms, proxy.ts: 165ms, application-code: 11ms)
+⨯ ./app/(dashboard)/projects/[id]/page.tsx:176:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  [90m174 |[0m     </div>
+  [90m175 |[0m   );
+[31m[1m>[0m [90m176 |[0m }
+  [90m    |[0m [31m[1m^[0m
+  [90m177 |[0m
+
+Parsing ecmascript source code failed
+
+
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 500 in 199ms (next.js: 23ms, proxy.ts: 166ms, application-code: 10ms)
+⨯ ./app/(dashboard)/projects/[id]/page.tsx:176:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  [90m174 |[0m     </div>
+  [90m175 |[0m   );
+[31m[1m>[0m [90m176 |[0m }
+  [90m    |[0m [31m[1m^[0m
+  [90m177 |[0m
+
+Parsing ecmascript source code failed
+
+
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 500 in 430ms (next.js: 9ms, proxy.ts: 411ms, application-code: 10ms)
+[browser] Uncaught Error: ./app/(dashboard)/projects/[id]/page.tsx:176:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  174 |     </div>
+  175 |   );
+> 176 | }
+      | ^
+  177 |
+
+Parsing ecmascript source code failed
+
+
+    at <unknown> (Error: ./app/(dashboard)/projects/[id]/page.tsx:176:1)
+    at <unknown> (Error: (./app/(dashboard)/projects/[id]/page.tsx:176:1)
+✓ Compiled in 221ms
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 1802ms (next.js: 140ms, proxy.ts: 478ms, application-code: 1184ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 762ms (next.js: 118ms, proxy.ts: 547ms, application-code: 97ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 755ms (next.js: 112ms, proxy.ts: 553ms, application-code: 90ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 1098ms (next.js: 18ms, proxy.ts: 486ms, application-code: 594ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 460ms (next.js: 14ms, proxy.ts: 433ms, application-code: 14ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 201ms (next.js: 7ms, proxy.ts: 164ms, application-code: 29ms)
+ GET /projects/eadc1b22-2f43-434c-9146-a10c825d14b1 200 in 516ms (next.js: 17ms, proxy.ts: 455ms, application-code: 43ms)
+ GET /projects 200 in 522ms (next.js: 39ms, proxy.ts: 459ms, application-code: 24ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 213ms (next.js: 12ms, proxy.ts: 168ms, application-code: 32ms)
+ GET /projects/eadc1b22-2f43-434c-9146-a10c825d14b1 200 in 532ms (next.js: 23ms, proxy.ts: 485ms, application-code: 25ms)
+ GET /projects 200 in 524ms (next.js: 4ms, proxy.ts: 492ms, application-code: 29ms)
+ GET /dashboard 200 in 850ms (next.js: 153ms, proxy.ts: 474ms, application-code: 223ms)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+^C

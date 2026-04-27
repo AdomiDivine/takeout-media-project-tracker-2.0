@@ -93,7 +93,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    <SelectItem key={p.id} value={p.id} label={p.name}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

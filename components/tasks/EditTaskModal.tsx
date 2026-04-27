@@ -193,7 +193,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
                   </SelectTrigger>
                   <SelectContent>
                     {unassigned.map(u => (
-                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                      <SelectItem key={u.id} value={u.id} label={u.name}>{u.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

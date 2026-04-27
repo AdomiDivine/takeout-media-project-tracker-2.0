@@ -118,7 +118,7 @@ export default function TasksPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All projects</SelectItem>
-            {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            {projects.map(p => <SelectItem key={p.id} value={p.id} label={p.name}>{p.name}</SelectItem>)}
           </SelectContent>
         </Select>
 
