@@ -36,6 +36,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
 
   useEffect(() => {
     if (!open) return;
+    if (defaultProjectId) setProjectId(defaultProjectId);
     async function fetchData() {
       const supabase = createClient();
       const [{ data: users }, { data: proj }] = await Promise.all([
@@ -76,11 +77,19 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
     setLoading(false);
     if (insertError) { setError(insertError.message); return; }
 
-    // Assign selected members
+    // Assign selected members and send email notifications
     if (assignedMembers.length > 0 && newTask) {
+      const taskId = (newTask as any).id;
       await supabase.from("task_members").insert(
-        assignedMembers.map(m => ({ task_id: (newTask as any).id, user_id: m.id }))
+        assignedMembers.map(m => ({ task_id: taskId, user_id: m.id }))
       );
+      assignedMembers.forEach(m => {
+        fetch("/api/email/task-assigned", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId, assignedUserId: m.id }),
+        }).catch(() => {});
+      });
     }
 
     logActivity({ action: `Created task "${name}"`, projectId });
