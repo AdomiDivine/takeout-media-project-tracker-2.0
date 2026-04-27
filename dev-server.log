@@ -253,3 +253,38 @@
  GET /dashboard 200 in 2.2s (next.js: 1154ms, proxy.ts: 810ms, application-code: 230ms)
  GET /dashboard 200 in 3.5s (next.js: 1086ms, proxy.ts: 2.1s, application-code: 340ms)
  GET /dashboard 200 in 1125ms (next.js: 367ms, proxy.ts: 470ms, application-code: 289ms)
+ GET /dashboard 200 in 1285ms (next.js: 6ms, proxy.ts: 478ms, application-code: 801ms)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 696ms (next.js: 150ms, proxy.ts: 498ms, application-code: 48ms)
+ GET /projects/eadc1b22-2f43-434c-9146-a10c825d14b1 200 in 528ms (next.js: 17ms, proxy.ts: 478ms, application-code: 33ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 567ms (next.js: 21ms, proxy.ts: 518ms, application-code: 28ms)
+✓ Compiled in 639ms
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 963ms (next.js: 165ms, proxy.ts: 663ms, application-code: 135ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 264ms (next.js: 10ms, proxy.ts: 168ms, application-code: 86ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 251ms (next.js: 9ms, proxy.ts: 170ms, application-code: 73ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 253ms (next.js: 18ms, proxy.ts: 163ms, application-code: 73ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 250ms (next.js: 7ms, proxy.ts: 181ms, application-code: 61ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 223ms (next.js: 5ms, proxy.ts: 160ms, application-code: 58ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 247ms (next.js: 18ms, proxy.ts: 161ms, application-code: 68ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 248ms (next.js: 7ms, proxy.ts: 177ms, application-code: 64ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 241ms (next.js: 6ms, proxy.ts: 177ms, application-code: 58ms)
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 221ms (next.js: 12ms, proxy.ts: 158ms, application-code: 51ms)
+✓ Compiled in 220ms
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 753ms (next.js: 112ms, proxy.ts: 547ms, application-code: 94ms)
+✓ Compiled in 144ms
+ GET /projects/5f879339-9c05-440b-87f1-5c50ac9f3829 200 in 865ms (next.js: 141ms, proxy.ts: 622ms, application-code: 102ms)

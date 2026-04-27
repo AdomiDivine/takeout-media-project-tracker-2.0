@@ -99,49 +99,53 @@ export default function ProjectPage() {
       </button>
 
       {/* Project header card */}
-      <div className="max-w-2xl bg-card border border-border rounded-xl overflow-hidden">
-        {/* Cover image */}
-        {project.avatar_url ? (
-          <div className="h-36 overflow-hidden">
-            <img src={project.avatar_url} alt={project.name} className="w-full h-full object-cover" />
-          </div>
-        ) : (
-          <div className="h-36 bg-brand/10 flex items-center justify-center">
-            <FolderOpen size={40} className="text-brand/30" />
-          </div>
-        )}
+      <div className="flex gap-6 items-start">
+        {/* Portrait image */}
+        <div className="w-36 flex-shrink-0">
+          {project.avatar_url ? (
+            <div className="aspect-[3/4] rounded-xl overflow-hidden bg-muted border border-border">
+              <img src={project.avatar_url} alt={project.name} className="w-full h-full object-cover object-top" />
+            </div>
+          ) : (
+            <div className="aspect-[3/4] rounded-xl bg-brand/10 border border-border flex items-center justify-center">
+              <FolderOpen size={32} className="text-brand/30" />
+            </div>
+          )}
+        </div>
 
-        {/* Project info */}
-        <div className="p-5 flex items-start justify-between gap-4">
-          <div className="space-y-1 min-w-0">
-            <h2 className="text-xl font-bold leading-tight">{project.name}</h2>
-            {project.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed">{project.description}</p>
-            )}
-            <p className="text-xs text-muted-foreground pt-1">
-              {(project as any).team_lead?.name && `Lead: ${(project as any).team_lead.name} · `}
-              Created {format(new Date(project.created_at), "MMM d, yyyy")}
-            </p>
-          </div>
+        <div className="flex-1 bg-card border border-border rounded-xl overflow-hidden">
+          {/* Project info */}
+          <div className="p-5 flex items-start justify-between gap-4">
+            <div className="space-y-1 min-w-0">
+              <h2 className="text-xl font-bold leading-tight">{project.name}</h2>
+              {project.description && (
+                <p className="text-sm text-muted-foreground leading-relaxed">{project.description}</p>
+              )}
+              <p className="text-xs text-muted-foreground pt-1">
+                {(project as any).team_lead?.name && `Lead: ${(project as any).team_lead.name} · `}
+                Created {format(new Date(project.created_at), "MMM d, yyyy")}
+              </p>
+            </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge variant="outline" className="text-[10px] text-status-completed border-status-completed/30 bg-status-completed/10">
-              Active
-            </Badge>
-            {canManage && (
-              <>
-                <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={() => setEditOpen(true)}>
-                  <Pencil size={12} /> Edit
-                </Button>
-                <Button
-                  size="sm" variant="outline" className="gap-1.5 text-xs h-7"
-                  disabled={archiving} onClick={handleArchive}
-                >
-                  <Archive size={12} />
-                  {archiving ? "Archiving…" : "Archive"}
-                </Button>
-              </>
-            )}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Badge variant="outline" className="text-[10px] text-status-completed border-status-completed/30 bg-status-completed/10">
+                Active
+              </Badge>
+              {canManage && (
+                <>
+                  <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={() => setEditOpen(true)}>
+                    <Pencil size={12} /> Edit
+                  </Button>
+                  <Button
+                    size="sm" variant="outline" className="gap-1.5 text-xs h-7"
+                    disabled={archiving} onClick={handleArchive}
+                  >
+                    <Archive size={12} />
+                    {archiving ? "Archiving…" : "Archive"}
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

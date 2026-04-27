@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TaskCard from "./TaskCard";
 import NewTaskModal from "@/components/tasks/NewTaskModal";
+import EditTaskModal from "@/components/tasks/EditTaskModal";
 import { createClient } from "@/lib/supabase/client";
 import { useTasks } from "@/lib/hooks/useTasks";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, useDroppable } from "@dnd-kit/core";
@@ -49,6 +50,7 @@ export default function KanbanBoard() {
   const [filter, setFilter] = useState<FilterTab>("all");
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>("pending");
+  const [editTask, setEditTask] = useState<Task | null>(null);
   const [boardView, setBoardView] = useState<BoardView>("board");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -246,6 +248,7 @@ export default function KanbanBoard() {
                           <TaskCard
                             key={task.id}
                             task={task}
+                            onEdit={setEditTask}
                             onMarkDone={handleMarkDone}
                             onDelete={handleDelete}
                             onStatusChange={handleStatusChange}
@@ -285,6 +288,13 @@ export default function KanbanBoard() {
         defaultStatus={newTaskStatus}
         onClose={() => setNewTaskOpen(false)}
         onCreated={() => { setNewTaskOpen(false); refetch(); }}
+      />
+
+      <EditTaskModal
+        open={!!editTask}
+        task={editTask}
+        onClose={() => setEditTask(null)}
+        onUpdated={() => { setEditTask(null); refetch(); }}
       />
     </div>
   );
