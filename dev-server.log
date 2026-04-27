@@ -62,3 +62,58 @@
 ✓ Compiled in 385ms
  GET /dashboard 200 in 1718ms (next.js: 354ms, proxy.ts: 1265ms, application-code: 98ms)
  GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 2.2s (next.js: 589ms, proxy.ts: 1424ms, application-code: 155ms)
+ GET /projects 200 in 967ms (next.js: 80ms, proxy.ts: 858ms, application-code: 29ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 402ms (next.js: 27ms, proxy.ts: 345ms, application-code: 30ms)
+ GET /projects/fcd61740-f67a-484e-8f9b-5bb7f4cef521 200 in 1981ms (next.js: 19ms, proxy.ts: 527ms, application-code: 1435ms)
+[browser] [useTasks] fetch error: {
+  code: [32m'42P17'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'infinite recursion detected in policy for relation "projects"'[39m
+} 
+    at useTasks.useCallback[fetchTasks] (lib/hooks/useTasks.ts:23:24)
+  21 |
+  22 |     const { data, error } = await query;
+> 23 |     if (error) console.error("[useTasks] fetch error:", error);
+     |                        ^
+  24 |     if (data) setTasks(sortTasks(data as Task[]));
+  25 |     setLoading(false);
+  26 |   }, [projectId]); (lib/hooks/useTasks.ts:23:24)
+ GET /projects 200 in 541ms (next.js: 8ms, proxy.ts: 500ms, application-code: 33ms)
+ GET /dashboard 200 in 535ms (next.js: 4ms, proxy.ts: 226ms, application-code: 305ms)
+[browser] [useTasks] fetch error: {
+  code: [32m'42P17'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'infinite recursion detected in policy for relation "projects"'[39m
+} 
+    at useTasks.useCallback[fetchTasks] (lib/hooks/useTasks.ts:23:24)
+  21 |
+  22 |     const { data, error } = await query;
+> 23 |     if (error) console.error("[useTasks] fetch error:", error);
+     |                        ^
+  24 |     if (data) setTasks(sortTasks(data as Task[]));
+  25 |     setLoading(false);
+  26 |   }, [projectId]); (lib/hooks/useTasks.ts:23:24)
+[browser] [useTasks] fetch error: {
+  code: [32m'42P17'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'infinite recursion detected in policy for relation "projects"'[39m
+} 
+    at useTasks.useCallback[fetchTasks] (lib/hooks/useTasks.ts:23:24)
+  21 |
+  22 |     const { data, error } = await query;
+> 23 |     if (error) console.error("[useTasks] fetch error:", error);
+     |                        ^
+  24 |     if (data) setTasks(sortTasks(data as Task[]));
+  25 |     setLoading(false);
+  26 |   }, [projectId]); (lib/hooks/useTasks.ts:23:24)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
