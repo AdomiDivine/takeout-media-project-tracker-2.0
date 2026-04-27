@@ -10,28 +10,27 @@ export function useTasks(projectId?: string) {
   const channelName = useRef(`tasks-${projectId ?? "all"}-${Math.random().toString(36).slice(2)}`).current;
 
   const fetchTasks = useCallback(async () => {
-    const supabase = createClient();
-    let query = supabase
-      .from("tasks")
-      .select(`*, members:task_members(user:users(*)), project:projects(*)`)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+    const url = projectId
+      ? `/api/tasks/mine?projectId=${projectId}`
+      : `/api/tasks/mine`;
 
-    if (projectId) query = query.eq("project_id", projectId);
-
-    const { data, error } = await query;
-    if (error) console.error("[useTasks] fetch error:", error.message, error.code, error.details, error.hint);
-    if (data) setTasks(sortTasks(data as Task[]));
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      setTasks(sortTasks(data as Task[]));
+    }
     setLoading(false);
   }, [projectId]);
 
   useEffect(() => {
     fetchTasks();
 
+    // Keep real-time subscription to trigger refetch on any task change
     const supabase = createClient();
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, fetchTasks)
+      .on("postgres_changes", { event: "*", schema: "public", table: "task_members" }, fetchTasks)
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -42,9 +41,9 @@ export function useTasks(projectId?: string) {
 
 // Overdue first → oldest in-progress → newest pending → newest completed
 function sortTasks(tasks: Task[]): Task[] {
-  const order = { overdue: 0, in_progress: 1, pending: 2, completed: 3 };
+  const order: Record<string, number> = { overdue: 0, in_progress: 1, pending: 2, completed: 3 };
   return [...tasks].sort((a, b) => {
-    const orderDiff = order[a.status] - order[b.status];
+    const orderDiff = (order[a.status] ?? 9) - (order[b.status] ?? 9);
     if (orderDiff !== 0) return orderDiff;
     if (a.status === "in_progress") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
