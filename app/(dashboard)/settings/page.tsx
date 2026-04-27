@@ -195,7 +195,7 @@ export default function SettingsPage() {
                 {isSuperAdmin && member.id !== user?.id ? (
                   <Select
                     value={member.role}
-                    onValueChange={(v) => handleRoleChange(member.id, v)}
+                    onValueChange={(v) => v && handleRoleChange(member.id, v)}
                   >
                     <SelectTrigger className="w-32 h-7 text-xs">
                       <SelectValue>
