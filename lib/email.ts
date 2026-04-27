@@ -12,7 +12,7 @@ export async function sendEmail({
   html: string;
 }) {
   const { error } = await resend.emails.send({
-    from: "TM Slate <notifications@your-domain.com>",
+    from: "TM Slate <onboarding@resend.dev>",
     to,
     subject,
     html,
