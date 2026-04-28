@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TaskCard from "@/components/dashboard/TaskCard";
@@ -42,6 +42,21 @@ export default function ProjectKanban({ projectId }: { projectId: string }) {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    async function fetchUser() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+        const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
+        if (profile) setIsAdmin(["super_admin", "admin", "team_lead"].includes(profile.role));
+      }
+    }
+    fetchUser();
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -155,6 +170,8 @@ export default function ProjectKanban({ projectId }: { projectId: string }) {
                       <TaskCard
                         key={task.id}
                         task={task}
+                        currentUserId={currentUserId}
+                        isAdmin={isAdmin}
                         onMarkDone={handleMarkDone}
                         onEdit={setEditTask}
                         onDelete={handleDelete}

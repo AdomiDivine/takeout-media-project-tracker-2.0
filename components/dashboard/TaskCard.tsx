@@ -11,6 +11,8 @@ import type { Task } from "@/types";
 
 interface TaskCardProps {
   task: Task;
+  currentUserId?: string;
+  isAdmin?: boolean;
   onEdit?: (task: Task) => void;
   onDelete?: (task: Task) => void;
   onMarkDone?: (task: Task) => void;
@@ -26,8 +28,9 @@ const priorityStyles = {
 
 const priorityLabels = { high: "High", medium: "Medium", low: "Low" };
 
-export default function TaskCard({ task, onEdit, onDelete, onMarkDone, onStatusChange, onProgressChange }: TaskCardProps) {
+export default function TaskCard({ task, currentUserId, isAdmin, onEdit, onDelete, onMarkDone, onStatusChange, onProgressChange }: TaskCardProps) {
   const isOverdue = task.status === "overdue";
+  const canDelete = isAdmin || task.created_by === currentUserId;
   const showProgress = task.status === "in_progress" || task.status === "overdue";
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -97,7 +100,9 @@ export default function TaskCard({ task, onEdit, onDelete, onMarkDone, onStatusC
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={() => onEdit?.(task)}>Edit</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete?.(task)} className="text-status-overdue">Delete</DropdownMenuItem>
+            {canDelete && (
+              <DropdownMenuItem onClick={() => onDelete?.(task)} className="text-status-overdue">Delete</DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

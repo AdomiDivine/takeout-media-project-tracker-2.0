@@ -30,14 +30,24 @@ export default function TasksPage() {
   const [projectFilter, setProjectFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [projects, setProjects] = useState<Project[]>([]);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    async function fetchProjects() {
+    async function fetchData() {
       const supabase = createClient();
-      const { data } = await supabase.from("projects").select("*").eq("status", "active").order("name");
-      if (data) setProjects(data as Project[]);
+      const [{ data: projData }, { data: { user } }] = await Promise.all([
+        supabase.from("projects").select("*").eq("status", "active").order("name"),
+        supabase.auth.getUser(),
+      ]);
+      if (projData) setProjects(projData as Project[]);
+      if (user) {
+        setCurrentUserId(user.id);
+        const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
+        if (profile) setIsAdmin(["super_admin", "admin", "team_lead"].includes(profile.role));
+      }
     }
-    fetchProjects();
+    fetchData();
   }, []);
 
   const filtered = tasks.filter(t => {
@@ -153,6 +163,8 @@ export default function TasksPage() {
             <TaskCard
               key={task.id}
               task={task}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
               onEdit={setEditTask}
               onMarkDone={handleMarkDone}
               onDelete={handleDelete}
