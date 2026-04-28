@@ -89,7 +89,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
         fetch("/api/email/task-assigned", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ taskId, assignedUserId: m.id }),
+          body: JSON.stringify({ taskId, assignedUserId: m.id, assignedById: user.id }),
         }).catch(() => {});
       });
     }

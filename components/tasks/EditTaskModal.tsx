@@ -61,6 +61,8 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
   async function handleAddMember() {
     if (!addUserId || !task) return;
     setAddingMember(true);
+    const supabase = createClient();
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
     const addedUser = allUsers.find(u => u.id === addUserId);
     const res = await fetch("/api/tasks/assign", {
       method: "POST",
@@ -75,7 +77,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
       fetch("/api/email/task-assigned", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: task.id, assignedUserId: addUserId }),
+        body: JSON.stringify({ taskId: task.id, assignedUserId: addUserId, assignedById: currentUser?.id }),
       }).catch(() => {});
       setAddUserId("");
     }
