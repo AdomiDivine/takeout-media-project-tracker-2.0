@@ -26,7 +26,17 @@ export async function POST(req: NextRequest) {
         : Promise.resolve({ data: null }),
     ]);
 
-    if (!task || !assignee?.email) {
+    // Fallback: if the users table row is missing or has no email, pull from auth.users
+    let assigneeEmail = assignee?.email ?? null;
+    let assigneeName  = assignee?.name  ?? null;
+    if (!assigneeEmail) {
+      const { data: authUserData } = await supabase.auth.admin.getUserById(assignedUserId);
+      assigneeEmail = authUserData?.user?.email ?? null;
+      assigneeName  = assigneeName ?? authUserData?.user?.user_metadata?.name ?? authUserData?.user?.email?.split("@")[0] ?? "there";
+    }
+
+    if (!task || !assigneeEmail) {
+      console.error("[task-assigned email] no email found for user", assignedUserId);
       return NextResponse.json({ error: "Task or user not found" }, { status: 404 });
     }
 
@@ -36,10 +46,12 @@ export async function POST(req: NextRequest) {
     const priorityLabel = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
     const priorityColor = task.priority === "high" ? "#e74c3c" : task.priority === "medium" ? "#f39c12" : "#27ae60";
 
+    const displayName = assigneeName ?? "there";
+
     await sendEmail({
-      to: assignee.email,
+      to: assigneeEmail,
       subject: `You have a new task on TM Slate — "${task.name}"`,
-      text: `Hi ${assignee.name}, ${assignerName} has assigned you a new task: "${task.name}" on the ${projectName} project. Deadline: ${deadline}. Priority: ${priorityLabel}. Log in to TM Slate to get started.`,
+      text: `Hi ${displayName}, ${assignerName} has assigned you a new task: "${task.name}" on the ${projectName} project. Deadline: ${deadline}. Priority: ${priorityLabel}. Log in to TM Slate to get started.`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -69,7 +81,7 @@ export async function POST(req: NextRequest) {
         <!-- Greeting -->
         <tr>
           <td style="padding:36px 40px 0;">
-            <p style="margin:0;font-size:16px;color:#111827;font-weight:600;">Hi ${assignee.name},</p>
+            <p style="margin:0;font-size:16px;color:#111827;font-weight:600;">Hi ${displayName},</p>
             <p style="margin:12px 0 0;font-size:15px;color:#6b7280;line-height:1.6;">
               <strong style="color:#e8460a;">${assignerName}</strong> has assigned you a new task on TM Slate.
               Here's everything you need to know to hit the ground running:
