@@ -26,7 +26,7 @@ export default function SchedulePage() {
   const { tasks, loading } = useTasks();
   const today = new Date();
 
-  const [rangeStart, setRangeStart] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [rangeStart, setRangeStart] = useState(() => today);
 
   const rangeEnd  = addDays(rangeStart, DAYS - 1);
   const days      = Array.from({ length: DAYS }, (_, i) => addDays(rangeStart, i));
