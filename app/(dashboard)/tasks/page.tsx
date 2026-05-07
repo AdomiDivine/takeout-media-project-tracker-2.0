@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckSquare } from "lucide-react";
+import { CheckSquare, MoreVertical, Calendar, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import TaskCard from "@/components/dashboard/TaskCard";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
 import NewTaskModal from "@/components/tasks/NewTaskModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTasks } from "@/lib/hooks/useTasks";
+import { format, isPast, isToday } from "date-fns";
+import { cn } from "@/lib/utils";
 import type { Task, TaskStatus, Project } from "@/types";
 
 type StatusFilter = TaskStatus | "all";
@@ -21,6 +24,23 @@ const statusTabs: { key: StatusFilter; label: string }[] = [
   { key: "overdue",     label: "Overdue" },
   { key: "completed",   label: "Completed" },
 ];
+
+const priorityStyles: Record<string, string> = {
+  high:   "bg-red-500/10 text-red-500 border-red-500/30",
+  medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
+  low:    "bg-green-500/10 text-green-500 border-green-500/30",
+};
+
+const statusStyles: Record<string, string> = {
+  pending:     "bg-muted-foreground/15 text-muted-foreground border-muted-foreground/30",
+  in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/30",
+  completed:   "bg-green-500/10 text-green-600 border-green-500/30",
+  overdue:     "bg-red-500/10 text-red-500 border-red-500/30",
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "Pending", in_progress: "In Progress", completed: "Completed", overdue: "Overdue",
+};
 
 export default function TasksPage() {
   const { tasks, loading, refetch } = useTasks();
@@ -87,19 +107,19 @@ export default function TasksPage() {
     refetch();
   }
 
-  async function handleProgressChange(task: Task, progress: number) {
-    const supabase = createClient();
-    await supabase.from("tasks").update({ progress }).eq("id", task.id);
-    refetch();
-  }
-
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">My Tasks</h2>
-        <Button onClick={() => setNewTaskOpen(true)} size="sm" className="bg-brand hover:bg-brand/90 text-white gap-1.5">
-          <Plus size={16} /> New Task
-        </Button>
+        <div>
+          <h2 className="text-lg font-semibold">Tasks</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">All your tasks and assignments</p>
+        </div>
+        {isAdmin && (
+          <Button onClick={() => setNewTaskOpen(true)} size="sm" className="bg-brand hover:bg-brand/90 text-white gap-1.5">
+            <Plus size={16} /> New Task
+          </Button>
+        )}
       </div>
 
       {/* Status tabs */}
@@ -108,11 +128,12 @@ export default function TasksPage() {
           <button
             key={key}
             onClick={() => setStatusFilter(key)}
-            className={`px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px flex-shrink-0 ${
+            className={cn(
+              "px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px flex-shrink-0",
               statusFilter === key
                 ? "border-brand text-brand"
                 : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+            )}
           >
             {label}
             <span className="ml-1.5 text-xs opacity-60">{counts[key]}</span>
@@ -147,31 +168,179 @@ export default function TasksPage() {
         </Select>
       </div>
 
-      {/* Grid */}
+      {/* Task list */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3,4,5,6].map(i => <div key={i} className="h-36 bg-muted rounded-lg animate-pulse" />)}
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center py-16 gap-2 text-muted-foreground">
+        <div className="flex flex-col items-center py-20 gap-2 text-muted-foreground">
           <CheckSquare size={40} className="opacity-30" />
           <p className="text-sm">No tasks match your filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(task => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              currentUserId={currentUserId}
-              isAdmin={isAdmin}
-              onEdit={setEditTask}
-              onMarkDone={handleMarkDone}
-              onDelete={handleDelete}
-              onStatusChange={handleStatusChange}
-              onProgressChange={handleProgressChange}
-            />
-          ))}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          {/* Table header — desktop only */}
+          <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-border bg-muted/30">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Task</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Assigned by</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Deadline</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Priority / Status</span>
+            <span />
+          </div>
+
+          {filtered.map((task, idx) => {
+            const creator = (task as any).creator;
+            const members = (task as any).members as any[] ?? [];
+            const projectName = (task as any).project?.name ?? "";
+            const deadlineDate = new Date(task.deadline + "T00:00:00");
+            const isDeadlineSoon = (isPast(deadlineDate) || isToday(deadlineDate)) && task.status !== "completed";
+            const canDelete = isAdmin || task.created_by === currentUserId;
+
+            return (
+              <div
+                key={task.id}
+                onClick={() => setEditTask(task)}
+                className={cn(
+                  "group cursor-pointer transition-colors hover:bg-muted/30",
+                  idx !== filtered.length - 1 && "border-b border-border/60"
+                )}
+              >
+                {/* Desktop row */}
+                <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-4 items-center">
+                  {/* Task info */}
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{task.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {projectName && (
+                        <span className="text-xs text-muted-foreground truncate">{projectName}</span>
+                      )}
+                      {members.length > 0 && (
+                        <span className="text-xs text-muted-foreground truncate">
+                          · {members.map((m: any) => m.user?.name).filter(Boolean).join(", ")}
+                        </span>
+                      )}
+                    </div>
+                    {task.blocker && (
+                      <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
+                        <AlertTriangle size={11} /> {task.blocker}
+                      </p>
+                    )}
+                    {task.status === "in_progress" && task.progress > 0 && (
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden max-w-28">
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${task.progress}%` }} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{task.progress}%</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Assigned by */}
+                  <span className="text-sm text-muted-foreground truncate">
+                    {creator?.name ?? "—"}
+                  </span>
+
+                  {/* Deadline */}
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={12} className={cn(isDeadlineSoon ? "text-red-500" : "text-muted-foreground")} />
+                    <span className={cn("text-sm", isDeadlineSoon ? "text-red-500 font-medium" : "text-foreground")}>
+                      {format(deadlineDate, "MMM d, yyyy")}
+                    </span>
+                  </div>
+
+                  {/* Priority + Status */}
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge variant="outline" className={cn("text-xs capitalize", priorityStyles[task.priority])}>
+                      {task.priority}
+                    </Badge>
+                    <Badge variant="outline" className={cn("text-xs", statusStyles[task.status])}>
+                      {statusLabels[task.status]}
+                    </Badge>
+                  </div>
+
+                  {/* Actions */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      onClick={e => e.stopPropagation()}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity outline-none p-1"
+                    >
+                      <MoreVertical size={16} />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                      <DropdownMenuItem onClick={() => setEditTask(task)}>View details</DropdownMenuItem>
+                      {task.status !== "completed" && (
+                        <DropdownMenuItem onClick={() => handleMarkDone(task)}>Mark as done</DropdownMenuItem>
+                      )}
+                      {task.status === "pending" && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(task, "in_progress")}>Start task</DropdownMenuItem>
+                      )}
+                      {canDelete && (
+                        <DropdownMenuItem onClick={() => handleDelete(task)} className="text-red-500">
+                          Delete
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Mobile card */}
+                <div className="md:hidden px-4 py-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{task.name}</p>
+                      {projectName && <p className="text-xs text-muted-foreground mt-0.5">{projectName}</p>}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger onClick={e => e.stopPropagation()} className="text-muted-foreground outline-none shrink-0">
+                        <MoreVertical size={16} />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => setEditTask(task)}>View details</DropdownMenuItem>
+                        {task.status !== "completed" && (
+                          <DropdownMenuItem onClick={() => handleMarkDone(task)}>Mark as done</DropdownMenuItem>
+                        )}
+                        {canDelete && (
+                          <DropdownMenuItem onClick={() => handleDelete(task)} className="text-red-500">Delete</DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                    {creator?.name && <span>By {creator.name}</span>}
+                    <span className={cn("flex items-center gap-1", isDeadlineSoon && "text-red-500 font-medium")}>
+                      <Calendar size={11} /> {format(deadlineDate, "MMM d, yyyy")}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-1.5 flex-wrap">
+                    <Badge variant="outline" className={cn("text-xs capitalize", priorityStyles[task.priority])}>
+                      {task.priority}
+                    </Badge>
+                    <Badge variant="outline" className={cn("text-xs", statusStyles[task.status])}>
+                      {statusLabels[task.status]}
+                    </Badge>
+                  </div>
+
+                  {task.blocker && (
+                    <p className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertTriangle size={11} /> {task.blocker}
+                    </p>
+                  )}
+
+                  {task.status === "in_progress" && task.progress > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full bg-brand" style={{ width: `${task.progress}%` }} />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{task.progress}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

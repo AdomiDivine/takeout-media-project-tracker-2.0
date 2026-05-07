@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("tasks")
-      .select("*, members:task_members(user:users(*)), project:projects(*)")
+      .select("*, members:task_members(user:users(*)), project:projects(*), creator:users!created_by(id,name)")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
