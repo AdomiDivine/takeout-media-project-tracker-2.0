@@ -11,6 +11,7 @@ import { UserPlus, X, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import type { Task, TaskPriority, TaskStatus, User } from "@/types";
 
 interface Comment {
@@ -34,7 +35,10 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTaskModalProps) {
+  const [activeTab, setActiveTab] = useState<"details" | "comments">("details");
+
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [status, setStatus] = useState<TaskStatus>("pending");
@@ -57,7 +61,9 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
 
   useEffect(() => {
     if (!task || !open) return;
+    setActiveTab("details");
     setName(task.name);
+    setDescription(task.description ?? "");
     setDeadline(task.deadline);
     setPriority(task.priority);
     setStatus(task.status === "overdue" ? "in_progress" : task.status);
@@ -155,7 +161,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
     };
 
     const body = isAdmin
-      ? { ...base, name, deadline, priority, attachment_url: attachmentUrl || null }
+      ? { ...base, name, description: description || null, deadline, priority, attachment_url: attachmentUrl || null }
       : base;
 
     const res = await fetch("/api/tasks/update", {
@@ -183,183 +189,220 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
           <DialogTitle>Task Details</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-
-          {/* Task name */}
-          <div className="space-y-2">
-            <Label>Task name</Label>
-            {isAdmin ? (
-              <Input value={name} onChange={e => setName(e.target.value)} required />
-            ) : (
-              <p className="text-sm font-medium px-3 py-2 bg-muted rounded-md leading-snug">{name}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={status} onValueChange={(v) => v && setStatus(v as TaskStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Priority</Label>
-              {isAdmin ? (
-                <Select value={priority} onValueChange={(v) => v && setPriority(v as TaskPriority)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className={`text-sm font-semibold px-3 py-2 bg-muted rounded-md capitalize ${priorityColors[priority] ?? ""}`}>
-                  {priority}
-                </p>
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-border -mx-1 px-1">
+          {(["details", "comments"] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px",
+                activeTab === tab
+                  ? "border-brand text-brand"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               )}
-            </div>
-          </div>
-
-          {/* Deadline */}
-          <div className="space-y-2">
-            <Label>Deadline</Label>
-            {isAdmin ? (
-              <Input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} required />
-            ) : (
-              <p className="text-sm font-medium px-3 py-2 bg-muted rounded-md">
-                {deadline ? format(new Date(deadline + "T00:00:00"), "EEEE, MMMM d yyyy") : "—"}
-              </p>
-            )}
-          </div>
-
-          {/* Progress */}
-          {status === "in_progress" && (
-            <div className="space-y-2">
-              <Label>Progress: {progress}%</Label>
-              <input
-                type="range" min={0} max={100} value={progress}
-                onChange={e => setProgress(Number(e.target.value))}
-                className="w-full accent-brand"
-              />
-            </div>
-          )}
-
-          {/* Blocker */}
-          <div className="space-y-2">
-            <Label>Blocker <span className="text-muted-foreground">(optional)</span></Label>
-            <Textarea
-              placeholder="Describe any blockers…"
-              value={blocker}
-              onChange={e => setBlocker(e.target.value)}
-              rows={2}
-              className="resize-none"
-            />
-          </div>
-
-          {/* Attachment — admins only */}
-          {isAdmin && (
-            <div className="space-y-2">
-              <Label>Attachment link <span className="text-muted-foreground">(optional)</span></Label>
-              <Input type="url" placeholder="Google Drive, Figma, Docs…" value={attachmentUrl} onChange={e => setAttachmentUrl(e.target.value)} />
-            </div>
-          )}
-
-          {/* Member assignment — admins only */}
-          {isAdmin && (
-            <div className="space-y-3 pt-2 border-t border-border">
-              <Label>Assigned members</Label>
-              {assignedMembers.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {assignedMembers.map(member => (
-                    <div key={member.id} className="flex items-center gap-1.5 bg-muted rounded-full px-3 py-1 text-sm">
-                      <span>{member.name}</span>
-                      <button type="button" onClick={() => handleRemoveMember(member.id)}
-                        className="text-muted-foreground hover:text-foreground transition-colors">
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No members assigned yet.</p>
+            >
+              {tab}
+              {tab === "comments" && comments.length > 0 && (
+                <span className="ml-1.5 text-xs opacity-60">{comments.length}</span>
               )}
-              {unassigned.length > 0 && (
-                <div className="flex gap-2">
-                  <Select value={addUserId} onValueChange={(v) => v && setAddUserId(v)}>
-                    <SelectTrigger className="flex-1 h-9">
-                      <SelectValue placeholder="Add a member…">
-                        {addUserId ? unassigned.find(u => u.id === addUserId)?.name : undefined}
-                      </SelectValue>
-                    </SelectTrigger>
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-1">
+
+          {/* ── DETAILS TAB ── */}
+          {activeTab === "details" && (
+            <>
+              {/* Task name */}
+              <div className="space-y-2">
+                <Label>Task name</Label>
+                {isAdmin ? (
+                  <Input value={name} onChange={e => setName(e.target.value)} required />
+                ) : (
+                  <p className="text-sm font-medium px-3 py-2 bg-muted rounded-md leading-snug">{name}</p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label>Description</Label>
+                {isAdmin ? (
+                  <Textarea
+                    placeholder="Describe the task…"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    rows={3}
+                    className="resize-none"
+                  />
+                ) : (
+                  <p className="text-sm px-3 py-2 bg-muted rounded-md leading-relaxed whitespace-pre-wrap min-h-[64px]">
+                    {description || <span className="text-muted-foreground italic">No description provided.</span>}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={status} onValueChange={(v) => v && setStatus(v as TaskStatus)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {unassigned.map(u => (
-                        <SelectItem key={u.id} value={u.id} label={u.name}>{u.name}</SelectItem>
-                      ))}
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="outline" size="sm" className="gap-1.5 h-9 flex-shrink-0"
-                    disabled={!addUserId || addingMember} onClick={handleAddMember}>
-                    <UserPlus size={14} />
-                    {addingMember ? "Adding…" : "Add"}
-                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>Priority</Label>
+                  {isAdmin ? (
+                    <Select value={priority} onValueChange={(v) => v && setPriority(v as TaskPriority)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className={cn("text-sm font-semibold px-3 py-2 bg-muted rounded-md capitalize", priorityColors[priority])}>
+                      {priority}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Deadline */}
+              <div className="space-y-2">
+                <Label>Deadline</Label>
+                {isAdmin ? (
+                  <Input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} required />
+                ) : (
+                  <p className="text-sm font-medium px-3 py-2 bg-muted rounded-md">
+                    {deadline ? format(new Date(deadline + "T00:00:00"), "EEEE, MMMM d yyyy") : "—"}
+                  </p>
+                )}
+              </div>
+
+              {/* Progress */}
+              {status === "in_progress" && (
+                <div className="space-y-2">
+                  <Label>Progress: {progress}%</Label>
+                  <input
+                    type="range" min={0} max={100} value={progress}
+                    onChange={e => setProgress(Number(e.target.value))}
+                    className="w-full accent-brand"
+                  />
                 </div>
               )}
-            </div>
+
+              {/* Blocker */}
+              <div className="space-y-2">
+                <Label>Blocker <span className="text-muted-foreground">(optional)</span></Label>
+                <Textarea
+                  placeholder="Describe any blockers…"
+                  value={blocker}
+                  onChange={e => setBlocker(e.target.value)}
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
+
+              {/* Attachment — admins only */}
+              {isAdmin && (
+                <div className="space-y-2">
+                  <Label>Attachment link <span className="text-muted-foreground">(optional)</span></Label>
+                  <Input type="url" placeholder="Google Drive, Figma, Docs…" value={attachmentUrl} onChange={e => setAttachmentUrl(e.target.value)} />
+                </div>
+              )}
+
+              {/* Member assignment — admins only */}
+              {isAdmin && (
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <Label>Assigned members</Label>
+                  {assignedMembers.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {assignedMembers.map(member => (
+                        <div key={member.id} className="flex items-center gap-1.5 bg-muted rounded-full px-3 py-1 text-sm">
+                          <span>{member.name}</span>
+                          <button type="button" onClick={() => handleRemoveMember(member.id)}
+                            className="text-muted-foreground hover:text-foreground transition-colors">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No members assigned yet.</p>
+                  )}
+                  {unassigned.length > 0 && (
+                    <div className="flex gap-2">
+                      <Select value={addUserId} onValueChange={(v) => v && setAddUserId(v)}>
+                        <SelectTrigger className="flex-1 h-9">
+                          <SelectValue placeholder="Add a member…">
+                            {addUserId ? unassigned.find(u => u.id === addUserId)?.name : undefined}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unassigned.map(u => (
+                            <SelectItem key={u.id} value={u.id} label={u.name}>{u.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" variant="outline" size="sm" className="gap-1.5 h-9 flex-shrink-0"
+                        disabled={!addUserId || addingMember} onClick={handleAddMember}>
+                        <UserPlus size={14} />
+                        {addingMember ? "Adding…" : "Add"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
-          {/* Comments */}
-          <div className="space-y-3 pt-2 border-t border-border">
-            <Label>Comments</Label>
-            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-              {comments.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No comments yet. Be the first to leave one.</p>
-              ) : (
-                comments.map(c => (
-                  <div key={c.id} className="bg-muted/50 rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-xs font-semibold">{c.user.name}</span>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {format(new Date(c.created_at), "MMM d, h:mm a")}
-                      </span>
+          {/* ── COMMENTS TAB ── */}
+          {activeTab === "comments" && (
+            <div className="space-y-3">
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {comments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No comments yet. Start the conversation.</p>
+                ) : (
+                  comments.map(c => (
+                    <div key={c.id} className="bg-muted/50 rounded-lg px-3 py-2">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <span className="text-xs font-semibold">{c.user.name}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {format(new Date(c.created_at), "MMM d, h:mm a")}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-snug">{c.content}</p>
                     </div>
-                    <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-snug">{c.content}</p>
-                  </div>
-                ))
-              )}
-              <div ref={commentsEndRef} />
+                  ))
+                )}
+                <div ref={commentsEndRef} />
+              </div>
+              <div className="flex gap-2 items-end">
+                <Textarea
+                  placeholder="Write a comment… (Enter to send, Shift+Enter for new line)"
+                  value={newComment}
+                  onChange={e => setNewComment(e.target.value)}
+                  rows={2}
+                  className="resize-none text-sm flex-1"
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddComment(); }
+                  }}
+                />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0"
+                  disabled={!newComment.trim() || submittingComment} onClick={handleAddComment}>
+                  <Send size={14} />
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2 items-end">
-              <Textarea
-                placeholder="Write a comment… (Enter to send, Shift+Enter for new line)"
-                value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                rows={2}
-                className="resize-none text-sm flex-1"
-                onKeyDown={e => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleAddComment();
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 shrink-0"
-                disabled={!newComment.trim() || submittingComment}
-                onClick={handleAddComment}
-              >
-                <Send size={14} />
-              </Button>
-            </div>
-          </div>
+          )}
 
           {error && <p className="text-sm text-status-overdue">{error}</p>}
 

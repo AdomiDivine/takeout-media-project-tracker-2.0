@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest) {
     const { taskId, ...fields } = body;
     if (!taskId) return NextResponse.json({ error: "Missing taskId" }, { status: 400 });
 
-    const adminFields  = ["name", "deadline", "priority", "status", "progress", "blocker", "attachment_url", "completed_at"];
+    const adminFields  = ["name", "description", "deadline", "priority", "status", "progress", "blocker", "attachment_url", "completed_at"];
     const memberFields = ["status", "progress", "blocker", "completed_at"];
     const allowed      = isAdmin ? adminFields : memberFields;
 

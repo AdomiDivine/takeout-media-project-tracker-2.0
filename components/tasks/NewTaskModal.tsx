@@ -22,6 +22,7 @@ interface NewTaskModalProps {
 
 export default function NewTaskModal({ open, defaultStatus = "pending", defaultProjectId, onClose, onCreated }: NewTaskModalProps) {
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState("");
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
@@ -50,7 +51,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
   }, [open, defaultProjectId]);
 
   function reset() {
-    setName(""); setProjectId(""); setDeadline(""); setPriority("medium");
+    setName(""); setDescription(""); setProjectId(""); setDeadline(""); setPriority("medium");
     setBlocker(""); setAttachmentUrl(""); setAssignedMembers([]); setAddUserId(""); setError("");
   }
 
@@ -65,6 +66,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
 
     const { data: newTask, error: insertError } = await supabase.from("tasks").insert({
       name,
+      description: description || null,
       project_id: projectId,
       deadline,
       priority,
@@ -109,6 +111,19 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
           <div className="space-y-2">
             <Label htmlFor="task-name">Task name *</Label>
             <Input id="task-name" placeholder="What needs to be done?" value={name} onChange={e => setName(e.target.value)} required />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="task-desc">Description *</Label>
+            <Textarea
+              id="task-desc"
+              placeholder="Describe the task in detail — what needs to happen, any context, expected outcome…"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={3}
+              className="resize-none"
+              required
+            />
           </div>
 
           {!defaultProjectId && (

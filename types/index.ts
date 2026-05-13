@@ -34,6 +34,7 @@ export interface Project {
 export interface Task {
   id: string;
   name: string;
+  description: string | null;
   project_id: string;
   created_by: string;
   deadline: string;
