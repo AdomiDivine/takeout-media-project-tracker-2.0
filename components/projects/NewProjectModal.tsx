@@ -10,43 +10,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ImageUpload from "@/components/ui/image-upload";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity";
-import type { User } from "@/types";
+import type { Brand, User } from "@/types";
 
 interface NewProjectModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  defaultBrandId?: string;
 }
 
-export default function NewProjectModal({ open, onClose, onCreated }: NewProjectModalProps) {
+export default function NewProjectModal({ open, onClose, onCreated, defaultBrandId }: NewProjectModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [teamLeadId, setTeamLeadId] = useState("");
+  const [brandId, setBrandId] = useState(defaultBrandId ?? "");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [members, setMembers] = useState<User[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Stable temp path for image upload before project ID exists
   const [tempPath] = useState(() => `temp-${Date.now()}`);
 
   useEffect(() => {
     if (!open) return;
-    async function fetchMembers() {
+    setBrandId(defaultBrandId ?? "");
+    async function fetchData() {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("users")
-        .select("*")
-        .in("role", ["team_lead", "admin", "super_admin"])
-        .order("name");
-      if (data) setMembers(data as User[]);
+      const [{ data: membersData }, { data: brandsData }] = await Promise.all([
+        supabase.from("users").select("*").in("role", ["team_lead", "admin", "super_admin"]).order("name"),
+        supabase.from("brands").select("*").order("name"),
+      ]);
+      if (membersData) setMembers(membersData as User[]);
+      if (brandsData) setBrands(brandsData as Brand[]);
     }
-    fetchMembers();
-  }, [open]);
+    fetchData();
+  }, [open, defaultBrandId]);
 
   function reset() {
     setName(""); setDescription(""); setTeamLeadId("");
-    setAvatarUrl(""); setError("");
+    setBrandId(defaultBrandId ?? ""); setAvatarUrl(""); setError("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -63,6 +66,7 @@ export default function NewProjectModal({ open, onClose, onCreated }: NewProject
       created_by: user.id,
       team_lead_id: teamLeadId || null,
       avatar_url: avatarUrl || null,
+      brand_id: brandId || null,
     });
 
     setLoading(false);
@@ -78,7 +82,6 @@ export default function NewProjectModal({ open, onClose, onCreated }: NewProject
           <DialogTitle>New Project</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {/* Project image */}
           <div className="flex justify-center">
             <ImageUpload
               currentUrl={avatarUrl || null}
@@ -114,8 +117,25 @@ export default function NewProjectModal({ open, onClose, onCreated }: NewProject
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="proj-brand">Brand <span className="text-muted-foreground">(optional)</span></Label>
+            <Select value={brandId || "none"} onValueChange={(v) => setBrandId(v === "none" ? "" : v)}>
+              <SelectTrigger id="proj-brand" className="w-full">
+                <SelectValue placeholder="No brand">
+                  {brandId ? brands.find(b => b.id === brandId)?.name : "No brand"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— No brand —</SelectItem>
+                {brands.map(b => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="team-lead">Team Lead <span className="text-muted-foreground">(optional)</span></Label>
-            <Select value={teamLeadId || "none"} onValueChange={(v) => setTeamLeadId(!v || v === "none" ? "" : v)}>
+            <Select value={teamLeadId || "none"} onValueChange={(v) => setTeamLeadId(v === "none" ? "" : v)}>
               <SelectTrigger id="team-lead" className="w-full">
                 <SelectValue placeholder="No team lead">
                   {teamLeadId ? members.find(m => m.id === teamLeadId)?.name : "No team lead"}

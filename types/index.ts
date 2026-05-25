@@ -19,6 +19,15 @@ export interface User {
   created_at: string;
 }
 
+export interface Brand {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar_url: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -26,9 +35,11 @@ export interface Project {
   created_by: string;
   team_lead_id: string | null;
   avatar_url: string | null;
+  brand_id: string | null;
   status: ProjectStatus;
   created_at: string;
   team_lead?: User;
+  brand?: Brand;
 }
 
 export interface Task {

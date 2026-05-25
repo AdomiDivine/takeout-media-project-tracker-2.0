@@ -2,30 +2,32 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, FolderOpen, Settings, LogOut, ChevronDown, ChevronRight, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, FolderOpen, Settings, LogOut, ChevronDown, ChevronRight, Sun, Moon, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import type { Project, User } from "@/types";
+import type { Brand, Project, User } from "@/types";
 
 interface SidebarProps {
   user: User;
+  brands: Brand[];
   projects: Project[];
 }
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard",  icon: LayoutDashboard },
   { label: "My Tasks",  href: "/tasks",      icon: CheckSquare },
-  { label: "Calendar",  href: "/calendar",   icon: Calendar },
+  { label: "Schedule",  href: "/calendar",   icon: Calendar },
   { label: "Activity",  href: "/activity",   icon: Activity },
   { label: "Reports",   href: "/reports",    icon: BarChart2 },
   { label: "Archive",   href: "/archive",    icon: Archive },
 ];
 
-export default function Sidebar({ user, projects }: SidebarProps) {
+export default function Sidebar({ user, brands, projects }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [projectsOpen, setProjectsOpen] = useState(true);
+  const [brandsOpen, setBrandsOpen] = useState(true);
+  const [expandedBrand, setExpandedBrand] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
@@ -34,6 +36,17 @@ export default function Sidebar({ user, projects }: SidebarProps) {
     setIsDark(dark);
     document.documentElement.classList.toggle("dark", dark);
   }, []);
+
+  // Auto-expand the brand whose project is currently active
+  useEffect(() => {
+    const match = pathname.match(/^\/projects\/([^/]+)/);
+    if (match) {
+      const project = projects.find(p => p.id === match[1]);
+      if (project?.brand_id) setExpandedBrand(project.brand_id);
+    }
+    const brandMatch = pathname.match(/^\/brands\/([^/]+)/);
+    if (brandMatch) setExpandedBrand(brandMatch[1]);
+  }, [pathname, projects]);
 
   function toggleTheme() {
     const next = !isDark;
@@ -81,18 +94,37 @@ export default function Sidebar({ user, projects }: SidebarProps) {
           </ul>
         </div>
 
-        {/* Projects */}
+        {/* Brands */}
         <div>
           <button
-            onClick={() => setProjectsOpen(!projectsOpen)}
+            onClick={() => setBrandsOpen(!brandsOpen)}
             className="flex items-center justify-between w-full px-2 mb-2"
           >
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Projects</p>
-            {projectsOpen ? <ChevronDown size={12} className="text-muted-foreground" /> : <ChevronRight size={12} className="text-muted-foreground" />}
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Brands</p>
+            {brandsOpen
+              ? <ChevronDown size={12} className="text-muted-foreground" />
+              : <ChevronRight size={12} className="text-muted-foreground" />}
           </button>
 
-          {projectsOpen && (
+          {brandsOpen && (
             <ul className="space-y-0.5">
+              {/* All Brands link */}
+              <li>
+                <Link
+                  href="/brands"
+                  className={cn(
+                    "flex items-center gap-2.5 px-2 py-2 rounded-md text-sm transition-colors",
+                    pathname === "/brands"
+                      ? "bg-brand text-white font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  <Building2 size={16} />
+                  All Brands
+                </Link>
+              </li>
+
+              {/* All Projects link */}
               <li>
                 <Link
                   href="/projects"
@@ -107,21 +139,63 @@ export default function Sidebar({ user, projects }: SidebarProps) {
                   All Projects
                 </Link>
               </li>
-              {projects.map((project) => (
-                <li key={project.id}>
-                  <Link
-                    href={`/projects/${project.id}`}
-                    className={cn(
-                      "flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors pl-7",
-                      pathname === `/projects/${project.id}`
-                        ? "text-foreground font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+
+              {/* Individual brands with nested projects */}
+              {brands.map(brand => {
+                const brandProjects = projects.filter(p => p.brand_id === brand.id);
+                const isExpanded = expandedBrand === brand.id;
+                const isBrandActive = pathname === `/brands/${brand.id}`;
+
+                return (
+                  <li key={brand.id}>
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={`/brands/${brand.id}`}
+                        className={cn(
+                          "flex-1 flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors",
+                          isBrandActive
+                            ? "text-foreground font-medium bg-muted"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand/60 flex-shrink-0" />
+                        <span className="truncate">{brand.name}</span>
+                      </Link>
+                      {brandProjects.length > 0 && (
+                        <button
+                          onClick={() => setExpandedBrand(isExpanded ? null : brand.id)}
+                          className="p-1 text-muted-foreground hover:text-foreground rounded flex-shrink-0"
+                        >
+                          {isExpanded
+                            ? <ChevronDown size={11} />
+                            : <ChevronRight size={11} />}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Nested projects under brand */}
+                    {isExpanded && brandProjects.length > 0 && (
+                      <ul className="mt-0.5 space-y-0.5">
+                        {brandProjects.map(project => (
+                          <li key={project.id}>
+                            <Link
+                              href={`/projects/${project.id}`}
+                              className={cn(
+                                "flex items-center gap-2.5 pl-8 pr-2 py-1.5 rounded-md text-sm transition-colors",
+                                pathname === `/projects/${project.id}`
+                                  ? "text-foreground font-medium bg-muted"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                              )}
+                            >
+                              <span className="truncate">{project.name}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  >
-                    {project.name}
-                  </Link>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

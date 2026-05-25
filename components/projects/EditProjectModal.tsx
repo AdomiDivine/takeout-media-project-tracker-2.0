@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageUpload from "@/components/ui/image-upload";
 import { createClient } from "@/lib/supabase/client";
-import type { Project, User } from "@/types";
+import type { Brand, Project, User } from "@/types";
 
 interface EditProjectModalProps {
   open: boolean;
@@ -22,8 +22,10 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [teamLeadId, setTeamLeadId] = useState("");
+  const [brandId, setBrandId] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [members, setMembers] = useState<User[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -32,19 +34,20 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
     setName(project.name);
     setDescription(project.description ?? "");
     setTeamLeadId(project.team_lead_id ?? "");
+    setBrandId(project.brand_id ?? "");
     setAvatarUrl(project.avatar_url ?? "");
     setError("");
 
-    async function fetchMembers() {
+    async function fetchData() {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("users")
-        .select("*")
-        .in("role", ["team_lead", "admin", "super_admin"])
-        .order("name");
-      if (data) setMembers(data as User[]);
+      const [{ data: membersData }, { data: brandsData }] = await Promise.all([
+        supabase.from("users").select("*").in("role", ["team_lead", "admin", "super_admin"]).order("name"),
+        supabase.from("brands").select("*").order("name"),
+      ]);
+      if (membersData) setMembers(membersData as User[]);
+      if (brandsData) setBrands(brandsData as Brand[]);
     }
-    fetchMembers();
+    fetchData();
   }, [project, open]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -60,6 +63,7 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
         description: description || null,
         team_lead_id: teamLeadId || null,
         avatar_url: avatarUrl || null,
+        brand_id: brandId || null,
       })
       .eq("id", project.id)
       .select("*, team_lead:users!team_lead_id(name)")
@@ -111,8 +115,25 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="edit-proj-brand">Brand <span className="text-muted-foreground">(optional)</span></Label>
+            <Select value={brandId || "none"} onValueChange={(v) => setBrandId(v === "none" ? "" : v)}>
+              <SelectTrigger id="edit-proj-brand" className="w-full">
+                <SelectValue placeholder="No brand">
+                  {brandId ? brands.find(b => b.id === brandId)?.name : "No brand"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— No brand —</SelectItem>
+                {brands.map(b => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="edit-team-lead">Team Lead <span className="text-muted-foreground">(optional)</span></Label>
-            <Select value={teamLeadId || "none"} onValueChange={(v) => setTeamLeadId(!v || v === "none" ? "" : v)}>
+            <Select value={teamLeadId || "none"} onValueChange={(v) => setTeamLeadId(v === "none" ? "" : v)}>
               <SelectTrigger id="edit-team-lead" className="w-full">
                 <SelectValue placeholder="No team lead">
                   {teamLeadId ? members.find(m => m.id === teamLeadId)?.name : "No team lead"}

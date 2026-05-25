@@ -22,7 +22,7 @@ export default function ProjectsPage() {
     if (!user) return;
 
     const [{ data: proj }, { data: profile }] = await Promise.all([
-      supabase.from("projects").select("*, team_lead:users!team_lead_id(name)").eq("status", "active").order("name"),
+      supabase.from("projects").select("*, team_lead:users!team_lead_id(name), brand:brands(name)").eq("status", "active").order("name"),
       supabase.from("users").select("role").eq("id", user.id).single(),
     ]);
 
@@ -48,7 +48,7 @@ export default function ProjectsPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3].map(i => <div key={i} className="bg-card border border-border rounded-xl p-5 h-36 animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="bg-card border border-border rounded-xl p-5 h-36 animate-pulse" />)}
         </div>
       ) : projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
@@ -64,7 +64,6 @@ export default function ProjectsPage() {
               href={`/projects/${project.id}`}
               className="bg-card border border-border rounded-xl overflow-hidden hover:border-brand/40 transition-colors block group"
             >
-              {/* Project image or color banner */}
               {project.avatar_url ? (
                 <div className="h-28 overflow-hidden">
                   <img
@@ -86,6 +85,9 @@ export default function ProjectsPage() {
                     Active
                   </Badge>
                 </div>
+                {(project as any).brand?.name && (
+                  <p className="text-[10px] text-brand font-medium uppercase tracking-wider">{(project as any).brand.name}</p>
+                )}
                 {project.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2">{project.description}</p>
                 )}
