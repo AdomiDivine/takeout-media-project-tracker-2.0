@@ -118,7 +118,8 @@ export default function NewProjectModal({ open, onClose, onCreated, defaultBrand
 
           <div className="space-y-2">
             <Label htmlFor="proj-brand">Brand <span className="text-muted-foreground">(optional)</span></Label>
-            <Select value={brandId || "none"} onValueChange={(v) => setBrandId(v === "none" ? "" : v)}>
+          
+              <Select value={brandId || "none"} onValueChange={(v) => v && setBrandId(v === "none" ? "" : v)}>
               <SelectTrigger id="proj-brand" className="w-full">
                 <SelectValue placeholder="No brand">
                   {brandId ? brands.find(b => b.id === brandId)?.name : "No brand"}
@@ -135,7 +136,8 @@ export default function NewProjectModal({ open, onClose, onCreated, defaultBrand
 
           <div className="space-y-2">
             <Label htmlFor="team-lead">Team Lead <span className="text-muted-foreground">(optional)</span></Label>
-            <Select value={teamLeadId || "none"} onValueChange={(v) => setTeamLeadId(v === "none" ? "" : v)}>
+  
+          <Select value={teamLeadId || "none"} onValueChange={(v) => v && setTeamLeadId(v === "none" ? "" : v)}>
               <SelectTrigger id="team-lead" className="w-full">
                 <SelectValue placeholder="No team lead">
                   {teamLeadId ? members.find(m => m.id === teamLeadId)?.name : "No team lead"}
