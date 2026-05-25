@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +25,6 @@ const roleBadgeColors: Record<string, string> = {
 };
 
 export default function SettingsPage() {
-  const searchParams = useSearchParams();
   const membersRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
@@ -62,10 +60,10 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (!fetchLoading && searchParams.get("tab") === "members" && membersRef.current) {
+    if (!fetchLoading && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "members" && membersRef.current) {
       setTimeout(() => membersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     }
-  }, [fetchLoading, searchParams]);
+  }, [fetchLoading]);
 
   async function handleAvatarUploaded(url: string) {
     if (!user) return;

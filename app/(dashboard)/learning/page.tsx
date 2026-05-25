@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ElementType } from "react";
 import { Plus, GraduationCap, BookOpen, Tv, Headphones, FileText, MoreVertical, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import LearningModal from "@/components/learning/LearningModal";
 import type { LearningPath } from "@/types";
 
-const TYPE_ICONS: Record<string, React.ElementType> = {
+const TYPE_ICONS: Record<string, ElementType> = {
   book:    BookOpen,
   course:  GraduationCap,
   video:   Tv,
