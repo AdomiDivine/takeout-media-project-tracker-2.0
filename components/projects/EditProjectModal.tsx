@@ -116,7 +116,7 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
 
           <div className="space-y-2">
             <Label htmlFor="edit-proj-brand">Brand <span className="text-muted-foreground">(optional)</span></Label>
-            <Select value={brandId || "none"} onValueChange={(v) => setBrandId(v === "none" ? "" : v)}>
+            <Select value={brandId || "none"} onValueChange={(v) => setBrandId(!v || v === "none" ? "" : v)}>
               <SelectTrigger id="edit-proj-brand" className="w-full">
                 <SelectValue placeholder="No brand">
                   {brandId ? brands.find(b => b.id === brandId)?.name : "No brand"}
