@@ -27,7 +27,11 @@ export default function ForgotPasswordPage() {
 
     setLoading(false);
     if (error) {
-      setError(error.message);
+      setError(
+        error.message && error.message !== "{}"
+          ? error.message
+          : "Could not send the reset email — the email service may be temporarily unavailable. Please try again in a few minutes."
+      );
       return;
     }
     setSent(true);
