@@ -2,6 +2,8 @@ export type UserRole = "super_admin" | "admin" | "team_lead" | "member";
 export type ProjectStatus = "active" | "archived";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "overdue";
 export type TaskPriority = "high" | "medium" | "low";
+export type LearningType = "book" | "course" | "video" | "podcast" | "article" | "other";
+export type LearningStatus = "not_started" | "in_progress" | "completed";
 export type NotificationType =
   | "assignment"
   | "collaboration"
@@ -25,7 +27,9 @@ export interface Brand {
   description: string | null;
   avatar_url: string | null;
   created_by: string | null;
+  brand_manager_id: string | null;
   created_at: string;
+  brand_manager?: User;
 }
 
 export interface Project {
@@ -67,6 +71,23 @@ export interface TaskMember {
   user_id: string;
   added_at: string;
   user?: User;
+}
+
+export interface LearningPath {
+  id: string;
+  user_id: string;
+  title: string;
+  type: LearningType;
+  description: string | null;
+  url: string | null;
+  progress: number;
+  status: LearningStatus;
+  brand_id: string | null;
+  target_date: string | null;
+  completed_at: string | null;
+  created_at: string;
+  user?: User;
+  brand?: Brand;
 }
 
 export interface Notification {

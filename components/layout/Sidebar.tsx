@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, FolderOpen, Settings, LogOut, ChevronDown, ChevronRight, Sun, Moon, Building2 } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, FolderOpen, Settings, LogOut, ChevronDown, ChevronRight, Sun, Moon, Building2, GraduationCap } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -15,12 +15,14 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard",  icon: LayoutDashboard },
-  { label: "My Tasks",  href: "/tasks",      icon: CheckSquare },
-  { label: "Schedule",  href: "/calendar",   icon: Calendar },
-  { label: "Activity",  href: "/activity",   icon: Activity },
-  { label: "Reports",   href: "/reports",    icon: BarChart2 },
-  { label: "Archive",   href: "/archive",    icon: Archive },
+  { label: "Dashboard",     href: "/dashboard",  icon: LayoutDashboard },
+  { label: "My Tasks",      href: "/tasks",      icon: CheckSquare },
+  { label: "Brands",        href: "/brands",     icon: Building2 },
+  { label: "Schedule",      href: "/calendar",   icon: Calendar },
+  { label: "Activity",      href: "/activity",   icon: Activity },
+  { label: "Learning Path", href: "/learning",   icon: GraduationCap },
+  { label: "Reports",       href: "/reports",    icon: BarChart2 },
+  { label: "Archive",       href: "/archive",    icon: Archive },
 ];
 
 export default function Sidebar({ user, brands, projects }: SidebarProps) {
@@ -108,22 +110,6 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
 
           {brandsOpen && (
             <ul className="space-y-0.5">
-              {/* All Brands link */}
-              <li>
-                <Link
-                  href="/brands"
-                  className={cn(
-                    "flex items-center gap-2.5 px-2 py-2 rounded-md text-sm transition-colors",
-                    pathname === "/brands"
-                      ? "bg-brand text-white font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <Building2 size={16} />
-                  All Brands
-                </Link>
-              </li>
-
               {/* All Projects link */}
               <li>
                 <Link

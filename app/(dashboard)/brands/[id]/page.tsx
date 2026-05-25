@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Building2, FolderOpen, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, Building2, FolderOpen, Plus, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import NewProjectModal from "@/components/projects/NewProjectModal";
+import EditBrandModal from "@/components/brands/EditBrandModal";
 import type { Brand, Project } from "@/types";
 
 export default function BrandPage() {
@@ -18,13 +19,14 @@ export default function BrandPage() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState("");
   const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [editBrandOpen, setEditBrandOpen] = useState(false);
 
   async function fetchData() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     const [{ data: brandData }, { data: projectsData }, { data: profile }] = await Promise.all([
-      supabase.from("brands").select("*").eq("id", id).single(),
+      supabase.from("brands").select("*, brand_manager:users!brand_manager_id(id,name,email,role,avatar_url,created_at)").eq("id", id).single(),
       supabase.from("projects").select("*, team_lead:users!team_lead_id(name)").eq("brand_id", id).eq("status", "active").order("name"),
       user ? supabase.from("users").select("role").eq("id", user.id).single() : Promise.resolve({ data: null }),
     ]);
@@ -91,16 +93,23 @@ export default function BrandPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">{brand.description}</p>
             )}
             <p className="text-xs text-muted-foreground pt-1">
+              {(brand as any).brand_manager?.name && `Manager: ${(brand as any).brand_manager.name} · `}
               Created {format(new Date(brand.created_at), "MMM d, yyyy")}
             </p>
           </div>
+
+          {canManage && (
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7 flex-shrink-0" onClick={() => setEditBrandOpen(true)}>
+              <Pencil size={12} /> Edit
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Projects under this brand */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm">Projects</h3>
+          <h3 className="font-semibold text-sm">Projects <span className="text-muted-foreground font-normal">({projects.length})</span></h3>
           {canManage && (
             <Button size="sm" className="bg-brand hover:bg-brand/90 text-white gap-1.5" onClick={() => setNewProjectOpen(true)}>
               <Plus size={14} /> New Project
@@ -126,18 +135,13 @@ export default function BrandPage() {
               >
                 {project.avatar_url ? (
                   <div className="h-28 overflow-hidden">
-                    <img
-                      src={project.avatar_url}
-                      alt={project.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    <img src={project.avatar_url} alt={project.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   </div>
                 ) : (
                   <div className="h-28 bg-brand/10 flex items-center justify-center">
                     <FolderOpen size={32} className="text-brand/40" />
                   </div>
                 )}
-
                 <div className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-semibold text-sm leading-tight">{project.name}</p>
@@ -163,6 +167,13 @@ export default function BrandPage() {
         onClose={() => setNewProjectOpen(false)}
         onCreated={() => { setNewProjectOpen(false); fetchData(); router.refresh(); }}
         defaultBrandId={id}
+      />
+
+      <EditBrandModal
+        open={editBrandOpen}
+        brand={brand}
+        onClose={() => setEditBrandOpen(false)}
+        onUpdated={(updated) => { setBrand(updated); setEditBrandOpen(false); }}
       />
     </div>
   );
