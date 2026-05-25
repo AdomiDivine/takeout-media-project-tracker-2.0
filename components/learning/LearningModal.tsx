@@ -126,7 +126,8 @@ export default function LearningModal({ open, item, onClose, onSaved }: Learning
 
           <div className="space-y-2">
             <Label htmlFor="lp-type">Type *</Label>
-            <Select value={type} onValueChange={setType}>
+            <Select value={type} onValueChange={(value) => value && setType(value)}
+>
               <SelectTrigger id="lp-type" className="w-full">
                 <SelectValue>{LEARNING_TYPES.find(t => t.value === type)?.label}</SelectValue>
               </SelectTrigger>
@@ -163,7 +164,7 @@ export default function LearningModal({ open, item, onClose, onSaved }: Learning
 
           <div className="space-y-2">
             <Label htmlFor="lp-status">Status *</Label>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={(value) => value && setStatus(value)}>
               <SelectTrigger id="lp-status" className="w-full">
                 <SelectValue>{STATUS_OPTIONS.find(s => s.value === status)?.label}</SelectValue>
               </SelectTrigger>
