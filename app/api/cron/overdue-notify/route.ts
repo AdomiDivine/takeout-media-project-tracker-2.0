@@ -3,17 +3,17 @@ import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
 import { format, differenceInCalendarDays } from "date-fns";
 
-const supabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function GET(req: NextRequest) {
   // Protect the cron route with a secret header
   const secret = req.headers.get("x-cron-secret");
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const supabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   try {
     // Fetch overdue tasks that haven't had an email sent yet
