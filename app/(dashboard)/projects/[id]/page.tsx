@@ -27,6 +27,7 @@ export default function ProjectPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState("");
+  const [userId, setUserId] = useState("");
   const [archiving, setArchiving] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const { tasks } = useTasks(id);
@@ -41,12 +42,15 @@ export default function ProjectPage() {
       ]);
       if (data) setProject(data as Project);
       if (profile) setUserRole(profile.role);
+      if (user) setUserId(user.id);
       setLoading(false);
     }
     fetchProject();
   }, [id]);
 
-  const canManage = ["super_admin", "admin"].includes(userRole);
+  const isAdminRole = ["super_admin", "admin"].includes(userRole);
+  const isProjectLead = userRole === "team_lead" && project?.team_lead_id === userId;
+  const canManage = isAdminRole || isProjectLead;
 
   async function handleArchive() {
     if (!project) return;

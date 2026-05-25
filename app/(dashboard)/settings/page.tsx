@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,8 @@ const roleBadgeColors: Record<string, string> = {
 };
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
+  const membersRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -57,6 +60,12 @@ export default function SettingsPage() {
     }
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    if (!fetchLoading && searchParams.get("tab") === "members" && membersRef.current) {
+      setTimeout(() => membersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    }
+  }, [fetchLoading, searchParams]);
 
   async function handleAvatarUploaded(url: string) {
     if (!user) return;
@@ -163,7 +172,7 @@ export default function SettingsPage() {
 
       {/* Team members — admin/super_admin only */}
       {canManageMembers && (
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div ref={membersRef} className="bg-card border border-border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-medium text-sm">Team Members</h3>
             <span className="text-xs text-muted-foreground">{allUsers.length} member{allUsers.length !== 1 ? "s" : ""}</span>
