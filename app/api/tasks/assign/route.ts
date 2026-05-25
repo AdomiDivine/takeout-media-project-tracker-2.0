@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing taskId or userIds" }, { status: 400 });
     }
 
+    const supabase = getClient();
     const rows = (userIds as string[]).map((userId: string) => ({
       task_id: taskId,
       user_id: userId,
@@ -40,6 +43,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing taskId or userId" }, { status: 400 });
     }
 
+    const supabase = getClient();
     const { error } = await supabase
       .from("task_members")
       .delete()
