@@ -2,15 +2,22 @@
 
 import { useState, useEffect, type ElementType } from "react";
 import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import NewCycleModal from "@/components/learning/NewCycleModal";
 import MaterialModal from "@/components/learning/MaterialModal";
-import type { LearningCycle, LearningMaterial } from "@/types";
+import type { LearningMaterial } from "@/types";
 
-/* ── helpers ──────────────────────────────────────────── */
+/* ── constants ───────────────────────────────────────── */
+
+const YEAR = new Date().getFullYear();
+
+const QUARTERS = [
+  { key: "Q1" as const, label: "Q1", sub: `Jan – Mar ${YEAR}` },
+  { key: "Q2" as const, label: "Q2", sub: `Apr – Jun ${YEAR}` },
+  { key: "Q3" as const, label: "Q3", sub: `Jul – Sep ${YEAR}` },
+  { key: "Q4" as const, label: "Q4", sub: `Oct – Dec ${YEAR}` },
+];
 
 const TYPE_ICONS: Record<string, ElementType> = {
   book: BookOpen, course: GraduationCap, video: Tv,
@@ -46,22 +53,14 @@ const STATUS_LABELS: Record<string, string> = {
   completed:   "Completed",
 };
 
-function progress(materials: LearningMaterial[]) {
-  const total = materials.length;
-  const done = materials.filter(m => m.status === "completed").length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  return { total, done, pct };
-}
-
-/* ── page ─────────────────────────────────────────────── */
+/* ── page ────────────────────────────────────────────── */
 
 export default function LearningPage() {
-  const [cycles, setCycles] = useState<LearningCycle[]>([]);
+  const [materials, setMaterials] = useState<LearningMaterial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [newCycleOpen, setNewCycleOpen] = useState(false);
-  const [matModal, setMatModal] = useState<{ open: boolean; cycleId: string; item: LearningMaterial | null }>({
-    open: false, cycleId: "", item: null,
+  const [expandedQ, setExpandedQ] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ open: boolean; quarter: string; item: LearningMaterial | null }>({
+    open: false, quarter: "Q1", item: null,
   });
 
   async function fetchData() {
@@ -70,242 +69,207 @@ export default function LearningPage() {
     if (!user) return;
 
     const { data } = await supabase
-      .from("learning_cycles")
-      .select("*, materials:learning_materials(*)")
+      .from("learning_materials")
+      .select("*")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .eq("year", YEAR)
+      .order("created_at");
 
-    if (data) setCycles(data as LearningCycle[]);
+    if (data) setMaterials(data as LearningMaterial[]);
     setLoading(false);
   }
 
   useEffect(() => { fetchData(); }, []);
 
-  async function deleteMaterial(id: string) {
+  async function handleDelete(id: string) {
     const supabase = createClient();
     await supabase.from("learning_materials").delete().eq("id", id);
-    setCycles(prev => prev.map(c => ({
-      ...c,
-      materials: (c.materials ?? []).filter(m => m.id !== id),
-    })));
-  }
-
-  async function deleteCycle(id: string) {
-    if (!confirm("Delete this cycle and all its materials?")) return;
-    const supabase = createClient();
-    await supabase.from("learning_cycles").delete().eq("id", id);
-    setCycles(prev => prev.filter(c => c.id !== id));
-    if (expandedId === id) setExpandedId(null);
+    setMaterials(prev => prev.filter(m => m.id !== id));
   }
 
   if (loading) {
     return (
       <div className="space-y-4">
         <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-        {[1, 2].map(i => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}
+        {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />)}
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Learning Path</h2>
-        <Button onClick={() => setNewCycleOpen(true)} size="sm" className="bg-brand hover:bg-brand/90 text-white gap-1.5">
-          <Plus size={16} /> New Cycle
-        </Button>
+        <div>
+          <h2 className="text-lg font-semibold">Learning Path</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">{YEAR} · Click a quarter to expand</p>
+        </div>
       </div>
 
-      {cycles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-          <GraduationCap size={48} className="opacity-20" />
-          <p className="text-sm">No learning cycles yet.</p>
-          <Button size="sm" variant="outline" onClick={() => setNewCycleOpen(true)}>Create your first cycle</Button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {cycles.map(cycle => {
-            const mats = cycle.materials ?? [];
-            const { total, done, pct } = progress(mats);
-            const isExpanded = expandedId === cycle.id;
+      <div className="space-y-3">
+        {QUARTERS.map(({ key, label, sub }) => {
+          const qMaterials = materials.filter(m => m.quarter === key);
+          const total = qMaterials.length;
+          const done = qMaterials.filter(m => m.status === "completed").length;
+          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+          const isExpanded = expandedQ === key;
 
-            return (
-              <div key={cycle.id} className="bg-card border border-border rounded-xl overflow-hidden">
-                {/* Cycle header */}
-                <div className="flex items-center">
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : cycle.id)}
-                    className="flex-1 flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0">
-                        <GraduationCap size={15} className="text-brand" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm leading-tight">{cycle.name}</p>
-                        {cycle.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{cycle.description}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 flex-shrink-0 ml-4">
-                      {/* Progress */}
-                      <div className="text-right hidden sm:block">
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-semibold text-foreground">{done}/{total}</span> completed
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-brand rounded-full transition-all"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-muted-foreground w-7">{pct}%</span>
-                        </div>
-                      </div>
-                      <ChevronDown
-                        size={16}
-                        className={cn("text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")}
-                      />
-                    </div>
-                  </button>
-
-                  {/* Cycle delete */}
-                  <button
-                    onClick={() => deleteCycle(cycle.id)}
-                    className="px-3 py-4 text-muted-foreground hover:text-status-overdue transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+          return (
+            <div key={key} className="bg-card border border-border rounded-xl overflow-hidden">
+              {/* Quarter header — always visible, click to expand */}
+              <button
+                onClick={() => setExpandedQ(isExpanded ? null : key)}
+                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted/20 transition-colors text-left"
+              >
+                {/* Quarter label */}
+                <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-brand font-bold text-xs">{label}</span>
                 </div>
 
-                {/* Expanded body */}
-                {isExpanded && (
-                  <div className="border-t border-border">
-                    {/* Mobile progress */}
-                    <div className="sm:hidden px-5 py-3 border-b border-border/50">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-brand rounded-full" style={{ width: `${pct}%` }} />
+                {/* Name + subtitle */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{label} Learning Cycle</p>
+                  <p className="text-xs text-muted-foreground">{sub}</p>
+                </div>
+
+                {/* Progress */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  {total > 0 && (
+                    <div className="text-right hidden sm:block">
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">{done}/{total}</span> completed
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-xs text-muted-foreground">{done}/{total} · {pct}%</span>
+                        <span className="text-[10px] text-muted-foreground w-7">{pct}%</span>
                       </div>
                     </div>
+                  )}
+                  {total === 0 && (
+                    <span className="text-xs text-muted-foreground hidden sm:block">No items yet</span>
+                  )}
+                  <ChevronDown
+                    size={16}
+                    className={cn("text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")}
+                  />
+                </div>
+              </button>
 
-                    {mats.length === 0 ? (
-                      <div className="py-10 text-center text-sm text-muted-foreground">
-                        No materials yet.{" "}
-                        <button
-                          onClick={() => setMatModal({ open: true, cycleId: cycle.id, item: null })}
-                          className="text-brand hover:underline"
-                        >
-                          Add one
-                        </button>
+              {/* Expanded content */}
+              {isExpanded && (
+                <div className="border-t border-border">
+                  {/* Mobile progress */}
+                  {total > 0 && (
+                    <div className="sm:hidden px-5 py-2.5 border-b border-border/50 flex items-center gap-3">
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-brand rounded-full" style={{ width: `${pct}%` }} />
                       </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-5 py-2.5">Material</th>
-                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5 hidden sm:table-cell">Type</th>
-                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Cadre</th>
-                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Status</th>
-                              <th className="px-3 py-2.5 w-16"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {mats.map(mat => {
-                              const TypeIcon = TYPE_ICONS[mat.type] ?? GraduationCap;
-                              return (
-                                <tr key={mat.id} className="border-b border-border/40 last:border-0 hover:bg-muted/10 transition-colors">
-                                  <td className="px-5 py-3">
-                                    <div className="flex items-center gap-2">
-                                      <TypeIcon size={13} className="text-muted-foreground flex-shrink-0" />
-                                      <div>
-                                        <p className="text-sm font-medium leading-tight">{mat.title}</p>
-                                        {mat.url && (
-                                          <a
-                                            href={mat.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] text-brand hover:underline flex items-center gap-1 mt-0.5"
-                                          >
-                                            <ExternalLink size={9} /> Open link
-                                          </a>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="px-3 py-3 hidden sm:table-cell">
-                                    <span className="text-xs text-muted-foreground">{TYPE_LABELS[mat.type]}</span>
-                                  </td>
-                                  <td className="px-3 py-3">
-                                    <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", CADRE_STYLES[mat.cadre])}>
-                                      {CADRE_LABELS[mat.cadre]}
-                                    </Badge>
-                                  </td>
-                                  <td className="px-3 py-3">
-                                    <Badge variant="outline" className={cn("text-[10px]", STATUS_STYLES[mat.status])}>
-                                      {STATUS_LABELS[mat.status]}
-                                    </Badge>
-                                  </td>
-                                  <td className="px-3 py-3">
-                                    <div className="flex items-center gap-1">
-                                      <button
-                                        onClick={() => setMatModal({ open: true, cycleId: cycle.id, item: mat })}
-                                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                      >
-                                        <Pencil size={12} />
-                                      </button>
-                                      <button
-                                        onClick={() => deleteMaterial(mat.id)}
-                                        className="p-1 rounded text-muted-foreground hover:text-status-overdue hover:bg-muted transition-colors"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                      <span className="text-xs text-muted-foreground">{done}/{total} · {pct}%</span>
+                    </div>
+                  )}
 
-                    {/* Add material */}
-                    <div className="px-5 py-3 border-t border-border/50">
+                  {qMaterials.length === 0 ? (
+                    <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
+                      <GraduationCap size={28} className="opacity-20" />
+                      <p className="text-sm">No learning items in {label} yet.</p>
                       <button
-                        onClick={() => setMatModal({ open: true, cycleId: cycle.id, item: null })}
-                        className="flex items-center gap-1.5 text-xs text-brand hover:text-brand/80 transition-colors font-medium"
+                        onClick={() => setModal({ open: true, quarter: key, item: null })}
+                        className="text-xs text-brand hover:underline font-medium"
                       >
-                        <Plus size={13} /> Add material
+                        + Add your first item
                       </button>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-5 py-2.5">Material</th>
+                            <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5 hidden sm:table-cell">Type</th>
+                            <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Cadre</th>
+                            <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Status</th>
+                            <th className="px-3 py-2.5 w-16"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {qMaterials.map(mat => {
+                            const TypeIcon = TYPE_ICONS[mat.type] ?? GraduationCap;
+                            return (
+                              <tr key={mat.id} className="border-b border-border/40 last:border-0 hover:bg-muted/10 transition-colors">
+                                <td className="px-5 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <TypeIcon size={13} className="text-muted-foreground flex-shrink-0" />
+                                    <div>
+                                      <p className="text-sm font-medium leading-tight">{mat.title}</p>
+                                      {mat.url && (
+                                        <a href={mat.url} target="_blank" rel="noopener noreferrer"
+                                          className="text-[10px] text-brand hover:underline flex items-center gap-1 mt-0.5">
+                                          <ExternalLink size={9} /> Open link
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-3 hidden sm:table-cell">
+                                  <span className="text-xs text-muted-foreground">{TYPE_LABELS[mat.type]}</span>
+                                </td>
+                                <td className="px-3 py-3">
+                                  <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", CADRE_STYLES[mat.cadre])}>
+                                    {CADRE_LABELS[mat.cadre]}
+                                  </Badge>
+                                </td>
+                                <td className="px-3 py-3">
+                                  <Badge variant="outline" className={cn("text-[10px]", STATUS_STYLES[mat.status])}>
+                                    {STATUS_LABELS[mat.status]}
+                                  </Badge>
+                                </td>
+                                <td className="px-3 py-3">
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => setModal({ open: true, quarter: key, item: mat })}
+                                      className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(mat.id)}
+                                      className="p-1 rounded text-muted-foreground hover:text-status-overdue hover:bg-muted transition-colors"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
-      <NewCycleModal
-        open={newCycleOpen}
-        onClose={() => setNewCycleOpen(false)}
-        onCreated={() => { setNewCycleOpen(false); fetchData(); }}
-      />
+                  <div className="px-5 py-3 border-t border-border/50">
+                    <button
+                      onClick={() => setModal({ open: true, quarter: key, item: null })}
+                      className="flex items-center gap-1.5 text-xs text-brand hover:text-brand/80 font-medium transition-colors"
+                    >
+                      <Plus size={13} /> Add learning item
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       <MaterialModal
-        open={matModal.open}
-        cycleId={matModal.cycleId}
-        item={matModal.item}
-        onClose={() => setMatModal({ open: false, cycleId: "", item: null })}
-        onSaved={() => { setMatModal({ open: false, cycleId: "", item: null }); fetchData(); }}
+        open={modal.open}
+        quarter={modal.quarter}
+        year={YEAR}
+        item={modal.item}
+        onClose={() => setModal({ open: false, quarter: "Q1", item: null })}
+        onSaved={() => { setModal({ open: false, quarter: "Q1", item: null }); fetchData(); }}
       />
     </div>
   );

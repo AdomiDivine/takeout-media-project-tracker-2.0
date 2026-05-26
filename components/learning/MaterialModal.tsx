@@ -33,13 +33,14 @@ const STATUSES = [
 
 interface MaterialModalProps {
   open: boolean;
-  cycleId: string;
+  quarter: string;
+  year: number;
   item?: LearningMaterial | null;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function MaterialModal({ open, cycleId, item, onClose, onSaved }: MaterialModalProps) {
+export default function MaterialModal({ open, quarter, year, item, onClose, onSaved }: MaterialModalProps) {
   const isEdit = !!item;
 
   const [title, setTitle] = useState("");
@@ -54,12 +55,8 @@ export default function MaterialModal({ open, cycleId, item, onClose, onSaved }:
   useEffect(() => {
     if (!open) return;
     if (item) {
-      setTitle(item.title);
-      setType(item.type);
-      setCadre(item.cadre);
-      setStatus(item.status);
-      setUrl(item.url ?? "");
-      setNotes(item.notes ?? "");
+      setTitle(item.title); setType(item.type); setCadre(item.cadre);
+      setStatus(item.status); setUrl(item.url ?? ""); setNotes(item.notes ?? "");
     } else {
       setTitle(""); setType("course"); setCadre("personal_cognitive");
       setStatus("not_started"); setUrl(""); setNotes("");
@@ -76,13 +73,15 @@ export default function MaterialModal({ open, cycleId, item, onClose, onSaved }:
     if (!user) return;
 
     const payload = { title, type, cadre, status, url: url || null, notes: notes || null };
-
     let err;
+
     if (isEdit && item) {
       const { error: e } = await supabase.from("learning_materials").update(payload).eq("id", item.id);
       err = e;
     } else {
-      const { error: e } = await supabase.from("learning_materials").insert({ ...payload, cycle_id: cycleId, user_id: user.id });
+      const { error: e } = await supabase.from("learning_materials").insert({
+        ...payload, quarter, year, user_id: user.id,
+      });
       err = e;
     }
 
@@ -95,7 +94,7 @@ export default function MaterialModal({ open, cycleId, item, onClose, onSaved }:
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Material" : "Add Learning Material"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Material" : `Add to ${quarter}`}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-2">
@@ -148,24 +147,12 @@ export default function MaterialModal({ open, cycleId, item, onClose, onSaved }:
 
           <div className="space-y-2">
             <Label htmlFor="mat-url">Link / URL <span className="text-muted-foreground">(optional)</span></Label>
-            <Input
-              id="mat-url"
-              placeholder="https://..."
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-            />
+            <Input id="mat-url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="mat-notes">Notes <span className="text-muted-foreground">(optional)</span></Label>
-            <Textarea
-              id="mat-notes"
-              placeholder="Key takeaways, notes..."
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={2}
-              className="resize-none"
-            />
+            <Textarea id="mat-notes" placeholder="Key takeaways..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="resize-none" />
           </div>
 
           {error && <p className="text-sm text-status-overdue">{error}</p>}
@@ -173,7 +160,7 @@ export default function MaterialModal({ open, cycleId, item, onClose, onSaved }:
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
             <Button type="submit" className="flex-1 bg-brand hover:bg-brand/90 text-white" disabled={loading}>
-              {loading ? "Saving…" : isEdit ? "Save changes" : "Add material"}
+              {loading ? "Saving…" : isEdit ? "Save changes" : "Add item"}
             </Button>
           </div>
         </form>

@@ -92,25 +92,15 @@ export interface LearningPath {
   brand?: Brand;
 }
 
-export interface LearningCycle {
-  id: string;
-  user_id: string;
-  name: string;
-  description: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  created_at: string;
-  materials?: LearningMaterial[];
-}
-
 export interface LearningMaterial {
   id: string;
-  cycle_id: string;
   user_id: string;
   title: string;
   type: LearningType;
   cadre: LearningCadre;
   status: LearningMaterialStatus;
+  quarter: "Q1" | "Q2" | "Q3" | "Q4";
+  year: number;
   url: string | null;
   notes: string | null;
   created_at: string;
