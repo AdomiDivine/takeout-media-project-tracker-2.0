@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, type ElementType } from "react";
-import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText } from "lucide-react";
+import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import MaterialModal from "@/components/learning/MaterialModal";
@@ -17,6 +18,13 @@ const QUARTERS = [
   { key: "Q2" as const, label: "Q2", sub: `Apr – Jun ${YEAR}` },
   { key: "Q3" as const, label: "Q3", sub: `Jul – Sep ${YEAR}` },
   { key: "Q4" as const, label: "Q4", sub: `Oct – Dec ${YEAR}` },
+];
+
+const FILTERS = [
+  { value: "all",         label: "All" },
+  { value: "not_started", label: "Not Started" },
+  { value: "started",     label: "Started" },
+  { value: "completed",   label: "Completed" },
 ];
 
 const TYPE_ICONS: Record<string, ElementType> = {
@@ -53,12 +61,44 @@ const STATUS_LABELS: Record<string, string> = {
   completed:   "Completed",
 };
 
+/* ── export ──────────────────────────────────────────── */
+
+function exportCSV(materials: LearningMaterial[], activeFilter: string) {
+  const filtered = activeFilter === "all" ? materials : materials.filter(m => m.status === activeFilter);
+  const sorted = [...filtered].sort((a, b) => a.quarter.localeCompare(b.quarter));
+
+  const headers = ["Quarter", "Title", "Type", "Cadre", "Status", "URL", "Notes"];
+  const rows = sorted.map(m => [
+    m.quarter,
+    m.title,
+    TYPE_LABELS[m.type] ?? m.type,
+    CADRE_LABELS[m.cadre] ?? m.cadre,
+    STATUS_LABELS[m.status] ?? m.status,
+    m.url ?? "",
+    m.notes ?? "",
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const label = activeFilter === "all" ? "all" : activeFilter.replace("_", "-");
+  a.download = `learning-path-${YEAR}-${label}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ── page ────────────────────────────────────────────── */
 
 export default function LearningPage() {
   const [materials, setMaterials] = useState<LearningMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedQ, setExpandedQ] = useState<string | null>(null);
+  const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState<{ open: boolean; quarter: string; item: LearningMaterial | null }>({
     open: false, quarter: "Q1", item: null,
   });
@@ -87,6 +127,14 @@ export default function LearningPage() {
     setMaterials(prev => prev.filter(m => m.id !== id));
   }
 
+  // overall counts for filter pills
+  const counts = {
+    all:         materials.length,
+    not_started: materials.filter(m => m.status === "not_started").length,
+    started:     materials.filter(m => m.status === "started").length,
+    completed:   materials.filter(m => m.status === "completed").length,
+  } as Record<string, number>;
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -98,42 +146,75 @@ export default function LearningPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Learning Path</h2>
           <p className="text-xs text-muted-foreground mt-0.5">{YEAR} · Click a quarter to expand</p>
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 flex-shrink-0"
+          onClick={() => exportCSV(materials, filter)}
+          disabled={materials.length === 0}
+        >
+          <Download size={14} /> Export
+        </Button>
       </div>
 
+      {/* Filter pills */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {FILTERS.map(f => (
+          <button
+            key={f.value}
+            onClick={() => setFilter(f.value)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+              filter === f.value
+                ? "bg-brand text-white border-brand"
+                : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+            )}
+          >
+            {f.label}
+            <span className={cn(
+              "inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-semibold",
+              filter === f.value ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+            )}>
+              {counts[f.value] ?? 0}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Quarter cards */}
       <div className="space-y-3">
         {QUARTERS.map(({ key, label, sub }) => {
-          const qMaterials = materials.filter(m => m.quarter === key);
-          const total = qMaterials.length;
-          const done = qMaterials.filter(m => m.status === "completed").length;
+          const allQ = materials.filter(m => m.quarter === key);
+          const qMaterials = filter === "all" ? allQ : allQ.filter(m => m.status === filter);
+          const total = allQ.length;
+          const done = allQ.filter(m => m.status === "completed").length;
           const pct = total > 0 ? Math.round((done / total) * 100) : 0;
           const isExpanded = expandedQ === key;
 
           return (
             <div key={key} className="bg-card border border-border rounded-xl overflow-hidden">
-              {/* Quarter header — always visible, click to expand */}
+              {/* Quarter header */}
               <button
                 onClick={() => setExpandedQ(isExpanded ? null : key)}
                 className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted/20 transition-colors text-left"
               >
-                {/* Quarter label */}
                 <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0">
                   <span className="text-brand font-bold text-xs">{label}</span>
                 </div>
 
-                {/* Name + subtitle */}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{label} Learning Cycle</p>
                   <p className="text-xs text-muted-foreground">{sub}</p>
                 </div>
 
-                {/* Progress */}
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  {total > 0 && (
+                  {total > 0 ? (
                     <div className="text-right hidden sm:block">
                       <p className="text-xs text-muted-foreground">
                         <span className="font-semibold text-foreground">{done}/{total}</span> completed
@@ -145,8 +226,7 @@ export default function LearningPage() {
                         <span className="text-[10px] text-muted-foreground w-7">{pct}%</span>
                       </div>
                     </div>
-                  )}
-                  {total === 0 && (
+                  ) : (
                     <span className="text-xs text-muted-foreground hidden sm:block">No items yet</span>
                   )}
                   <ChevronDown
@@ -156,7 +236,7 @@ export default function LearningPage() {
                 </div>
               </button>
 
-              {/* Expanded content */}
+              {/* Expanded body */}
               {isExpanded && (
                 <div className="border-t border-border">
                   {/* Mobile progress */}
@@ -172,13 +252,19 @@ export default function LearningPage() {
                   {qMaterials.length === 0 ? (
                     <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
                       <GraduationCap size={28} className="opacity-20" />
-                      <p className="text-sm">No learning items in {label} yet.</p>
-                      <button
-                        onClick={() => setModal({ open: true, quarter: key, item: null })}
-                        className="text-xs text-brand hover:underline font-medium"
-                      >
-                        + Add your first item
-                      </button>
+                      <p className="text-sm">
+                        {filter === "all"
+                          ? `No items in ${label} yet.`
+                          : `No "${STATUS_LABELS[filter]}" items in ${label}.`}
+                      </p>
+                      {filter === "all" && (
+                        <button
+                          onClick={() => setModal({ open: true, quarter: key, item: null })}
+                          className="text-xs text-brand hover:underline font-medium"
+                        >
+                          + Add your first item
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
