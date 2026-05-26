@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, type ElementType } from "react";
-import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText, Download } from "lucide-react";
+import { useState, useEffect, useRef, type ElementType } from "react";
+import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText, Filter, Check, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -21,7 +21,7 @@ const QUARTERS = [
 ];
 
 const FILTERS = [
-  { value: "all",         label: "All" },
+  { value: "all",         label: "All items" },
   { value: "not_started", label: "Not Started" },
   { value: "started",     label: "Started" },
   { value: "completed",   label: "Completed" },
@@ -66,28 +66,22 @@ const STATUS_LABELS: Record<string, string> = {
 function exportCSV(materials: LearningMaterial[], activeFilter: string) {
   const filtered = activeFilter === "all" ? materials : materials.filter(m => m.status === activeFilter);
   const sorted = [...filtered].sort((a, b) => a.quarter.localeCompare(b.quarter));
-
   const headers = ["Quarter", "Title", "Type", "Cadre", "Status", "URL", "Notes"];
   const rows = sorted.map(m => [
-    m.quarter,
-    m.title,
+    m.quarter, m.title,
     TYPE_LABELS[m.type] ?? m.type,
     CADRE_LABELS[m.cadre] ?? m.cadre,
     STATUS_LABELS[m.status] ?? m.status,
-    m.url ?? "",
-    m.notes ?? "",
+    m.url ?? "", m.notes ?? "",
   ]);
-
   const csv = [headers, ...rows]
     .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     .join("\n");
-
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  const label = activeFilter === "all" ? "all" : activeFilter.replace("_", "-");
-  a.download = `learning-path-${YEAR}-${label}.csv`;
+  a.download = `learning-path-${YEAR}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -99,6 +93,8 @@ export default function LearningPage() {
   const [loading, setLoading] = useState(true);
   const [expandedQ, setExpandedQ] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [modal, setModal] = useState<{ open: boolean; quarter: string; item: LearningMaterial | null }>({
     open: false, quarter: "Q1", item: null,
   });
@@ -107,19 +103,28 @@ export default function LearningPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     const { data } = await supabase
       .from("learning_materials")
       .select("*")
       .eq("user_id", user.id)
       .eq("year", YEAR)
       .order("created_at");
-
     if (data) setMaterials(data as LearningMaterial[]);
     setLoading(false);
   }
 
   useEffect(() => { fetchData(); }, []);
+
+  // close filter dropdown on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   async function handleDelete(id: string) {
     const supabase = createClient();
@@ -127,13 +132,7 @@ export default function LearningPage() {
     setMaterials(prev => prev.filter(m => m.id !== id));
   }
 
-  // overall counts for filter pills
-  const counts = {
-    all:         materials.length,
-    not_started: materials.filter(m => m.status === "not_started").length,
-    started:     materials.filter(m => m.status === "started").length,
-    completed:   materials.filter(m => m.status === "completed").length,
-  } as Record<string, number>;
+  const activeFilterLabel = FILTERS.find(f => f.value === filter)?.label ?? "All items";
 
   if (loading) {
     return (
@@ -152,39 +151,51 @@ export default function LearningPage() {
           <h2 className="text-lg font-semibold">Learning Path</h2>
           <p className="text-xs text-muted-foreground mt-0.5">{YEAR} · Click a quarter to expand</p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1.5 flex-shrink-0"
-          onClick={() => exportCSV(materials, filter)}
-          disabled={materials.length === 0}
-        >
-          <Download size={14} /> Export
-        </Button>
-      </div>
 
-      {/* Filter pills */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {FILTERS.map(f => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
-              filter === f.value
-                ? "bg-brand text-white border-brand"
-                : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Filter dropdown */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen(o => !o)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors",
+                filter !== "all"
+                  ? "border-brand text-brand bg-brand/10"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"
+              )}
+            >
+              <Filter size={13} />
+              {filter === "all" ? "Filter" : activeFilterLabel}
+              <ChevronDown size={12} className={cn("transition-transform", filterOpen && "rotate-180")} />
+            </button>
+
+            {filterOpen && (
+              <div className="absolute right-0 top-9 z-20 bg-card border border-border rounded-lg shadow-lg py-1 w-40">
+                {FILTERS.map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => { setFilter(f.value); setFilterOpen(false); }}
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                  >
+                    <span className={filter === f.value ? "text-brand font-medium" : ""}>{f.label}</span>
+                    {filter === f.value && <Check size={13} className="text-brand" />}
+                  </button>
+                ))}
+              </div>
             )}
+          </div>
+
+          {/* Export */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => exportCSV(materials, filter)}
+            disabled={materials.length === 0}
           >
-            {f.label}
-            <span className={cn(
-              "inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-semibold",
-              filter === f.value ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
-            )}>
-              {counts[f.value] ?? 0}
-            </span>
-          </button>
-        ))}
+            <Download size={14} /> Export
+          </Button>
+        </div>
       </div>
 
       {/* Quarter cards */}
@@ -199,7 +210,6 @@ export default function LearningPage() {
 
           return (
             <div key={key} className="bg-card border border-border rounded-xl overflow-hidden">
-              {/* Quarter header */}
               <button
                 onClick={() => setExpandedQ(isExpanded ? null : key)}
                 className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted/20 transition-colors text-left"
@@ -236,10 +246,8 @@ export default function LearningPage() {
                 </div>
               </button>
 
-              {/* Expanded body */}
               {isExpanded && (
                 <div className="border-t border-border">
-                  {/* Mobile progress */}
                   {total > 0 && (
                     <div className="sm:hidden px-5 py-2.5 border-b border-border/50 flex items-center gap-3">
                       <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -255,7 +263,7 @@ export default function LearningPage() {
                       <p className="text-sm">
                         {filter === "all"
                           ? `No items in ${label} yet.`
-                          : `No "${STATUS_LABELS[filter]}" items in ${label}.`}
+                          : `No "${activeFilterLabel}" items in ${label}.`}
                       </p>
                       {filter === "all" && (
                         <button
