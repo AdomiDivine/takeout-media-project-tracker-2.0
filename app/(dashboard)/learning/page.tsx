@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, type ElementType } from "react";
-import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText, Filter, Check, Download } from "lucide-react";
+import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText, Filter, Check, Download, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -21,7 +21,6 @@ const QUARTERS = [
 ];
 
 const FILTERS = [
-  { value: "all",         label: "All items" },
   { value: "not_started", label: "Not Started" },
   { value: "started",     label: "Started" },
   { value: "completed",   label: "Completed" },
@@ -81,7 +80,7 @@ function exportCSV(materials: LearningMaterial[], activeFilter: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `learning-path-${YEAR}.csv`;
+  a.download = `learning-path-${YEAR}${activeFilter !== "all" ? `-${activeFilter}` : ""}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -115,12 +114,9 @@ export default function LearningPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // close filter dropdown on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
-      }
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -132,7 +128,8 @@ export default function LearningPage() {
     setMaterials(prev => prev.filter(m => m.id !== id));
   }
 
-  const activeFilterLabel = FILTERS.find(f => f.value === filter)?.label ?? "All items";
+  const activeFilterLabel = FILTERS.find(f => f.value === filter)?.label;
+  const isFiltered = filter !== "all";
 
   if (loading) {
     return (
@@ -149,7 +146,9 @@ export default function LearningPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Learning Path</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">{YEAR} · Click a quarter to expand</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {YEAR} · {isFiltered ? `Showing: ${activeFilterLabel}` : "Click a quarter to expand"}
+          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -159,25 +158,41 @@ export default function LearningPage() {
               onClick={() => setFilterOpen(o => !o)}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors",
-                filter !== "all"
+                isFiltered
                   ? "border-brand text-brand bg-brand/10"
                   : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"
               )}
             >
               <Filter size={13} />
-              {filter === "all" ? "Filter" : activeFilterLabel}
+              {isFiltered ? activeFilterLabel : "Filter"}
               <ChevronDown size={12} className={cn("transition-transform", filterOpen && "rotate-180")} />
             </button>
 
             {filterOpen && (
-              <div className="absolute right-0 top-9 z-20 bg-card border border-border rounded-lg shadow-lg py-1 w-40">
+              <div className="absolute right-0 top-9 z-20 bg-card border border-border rounded-lg shadow-lg py-1 w-44">
+                <button
+                  onClick={() => { setFilter("all"); setFilterOpen(false); }}
+                  className="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                >
+                  <span className={filter === "all" ? "text-brand font-medium" : ""}>All items</span>
+                  {filter === "all" && <Check size={13} className="text-brand" />}
+                </button>
+                <div className="border-t border-border/50 my-1" />
                 {FILTERS.map(f => (
                   <button
                     key={f.value}
                     onClick={() => { setFilter(f.value); setFilterOpen(false); }}
                     className="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
                   >
-                    <span className={filter === f.value ? "text-brand font-medium" : ""}>{f.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "w-2 h-2 rounded-full flex-shrink-0",
+                        f.value === "not_started" && "bg-muted-foreground",
+                        f.value === "started" && "bg-status-in-progress",
+                        f.value === "completed" && "bg-status-completed",
+                      )} />
+                      <span className={filter === f.value ? "text-brand font-medium" : ""}>{f.label}</span>
+                    </div>
                     {filter === f.value && <Check size={13} className="text-brand" />}
                   </button>
                 ))}
@@ -198,164 +213,238 @@ export default function LearningPage() {
         </div>
       </div>
 
-      {/* Quarter cards */}
-      <div className="space-y-3">
-        {QUARTERS.map(({ key, label, sub }) => {
-          const allQ = materials.filter(m => m.quarter === key);
-          const qMaterials = filter === "all" ? allQ : allQ.filter(m => m.status === filter);
-          const total = allQ.length;
-          const done = allQ.filter(m => m.status === "completed").length;
-          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-          const isExpanded = expandedQ === key;
+      {/* ── FILTERED VIEW: flat list, everything immediately visible ── */}
+      {isFiltered && (
+        <div className="space-y-4">
+          {/* Clear filter banner */}
+          <div className="flex items-center justify-between px-1">
+            <p className="text-xs text-muted-foreground">
+              {materials.filter(m => m.status === filter).length} item{materials.filter(m => m.status === filter).length !== 1 ? "s" : ""} · {activeFilterLabel}
+            </p>
+            <button
+              onClick={() => setFilter("all")}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={12} /> Clear filter
+            </button>
+          </div>
 
-          return (
-            <div key={key} className="bg-card border border-border rounded-xl overflow-hidden">
-              <button
-                onClick={() => setExpandedQ(isExpanded ? null : key)}
-                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted/20 transition-colors text-left"
-              >
-                <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-brand font-bold text-xs">{label}</span>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{label} Learning Cycle</p>
-                  <p className="text-xs text-muted-foreground">{sub}</p>
-                </div>
-
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  {total > 0 ? (
-                    <div className="text-right hidden sm:block">
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">{done}/{total}</span> completed
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${pct}%` }} />
+          {QUARTERS.map(({ key, label }) => {
+            const qItems = materials.filter(m => m.quarter === key && m.status === filter);
+            if (qItems.length === 0) return null;
+            return (
+              <div key={key} className="space-y-2">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+                  {label} Learning Cycle
+                </p>
+                {qItems.map(mat => {
+                  const TypeIcon = TYPE_ICONS[mat.type] ?? GraduationCap;
+                  return (
+                    <div key={mat.id} className="bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <TypeIcon size={14} className="text-brand" />
                         </div>
-                        <span className="text-[10px] text-muted-foreground w-7">{pct}%</span>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm leading-tight">{mat.title}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="text-[10px] text-muted-foreground">{TYPE_LABELS[mat.type]}</span>
+                            <span className="text-muted-foreground/40 text-[10px]">·</span>
+                            <Badge variant="outline" className={cn("text-[10px]", CADRE_STYLES[mat.cadre])}>
+                              {CADRE_LABELS[mat.cadre]}
+                            </Badge>
+                          </div>
+                          {mat.url && (
+                            <a href={mat.url} target="_blank" rel="noopener noreferrer"
+                              className="text-[10px] text-brand hover:underline flex items-center gap-1 mt-1">
+                              <ExternalLink size={9} /> Open link
+                            </a>
+                          )}
+                          {mat.notes && <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{mat.notes}</p>}
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2 flex-shrink-0">
+                        <Badge variant="outline" className={cn("text-[10px]", STATUS_STYLES[mat.status])}>
+                          {STATUS_LABELS[mat.status]}
+                        </Badge>
+                        <button
+                          onClick={() => setModal({ open: true, quarter: key, item: mat })}
+                          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(mat.id)}
+                          className="p-1 rounded text-muted-foreground hover:text-status-overdue hover:bg-muted transition-colors"
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground hidden sm:block">No items yet</span>
-                  )}
-                  <ChevronDown
-                    size={16}
-                    className={cn("text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")}
-                  />
-                </div>
-              </button>
+                  );
+                })}
+              </div>
+            );
+          })}
 
-              {isExpanded && (
-                <div className="border-t border-border">
-                  {total > 0 && (
-                    <div className="sm:hidden px-5 py-2.5 border-b border-border/50 flex items-center gap-3">
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-brand rounded-full" style={{ width: `${pct}%` }} />
+          {materials.filter(m => m.status === filter).length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+              <GraduationCap size={36} className="opacity-20" />
+              <p className="text-sm">No "{activeFilterLabel}" items found.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── DEFAULT VIEW: quarter accordion cards ── */}
+      {!isFiltered && (
+        <div className="space-y-3">
+          {QUARTERS.map(({ key, label, sub }) => {
+            const qMaterials = materials.filter(m => m.quarter === key);
+            const total = qMaterials.length;
+            const done = qMaterials.filter(m => m.status === "completed").length;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            const isExpanded = expandedQ === key;
+
+            return (
+              <div key={key} className="bg-card border border-border rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedQ(isExpanded ? null : key)}
+                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted/20 transition-colors text-left"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-brand font-bold text-xs">{label}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">{label} Learning Cycle</p>
+                    <p className="text-xs text-muted-foreground">{sub}</p>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {total > 0 ? (
+                      <div className="text-right hidden sm:block">
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-semibold text-foreground">{done}/{total}</span> completed
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground w-7">{pct}%</span>
+                        </div>
                       </div>
-                      <span className="text-xs text-muted-foreground">{done}/{total} · {pct}%</span>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-xs text-muted-foreground hidden sm:block">No items yet</span>
+                    )}
+                    <ChevronDown size={16} className={cn("text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")} />
+                  </div>
+                </button>
 
-                  {qMaterials.length === 0 ? (
-                    <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
-                      <GraduationCap size={28} className="opacity-20" />
-                      <p className="text-sm">
-                        {filter === "all"
-                          ? `No items in ${label} yet.`
-                          : `No "${activeFilterLabel}" items in ${label}.`}
-                      </p>
-                      {filter === "all" && (
+                {isExpanded && (
+                  <div className="border-t border-border">
+                    {total > 0 && (
+                      <div className="sm:hidden px-5 py-2.5 border-b border-border/50 flex items-center gap-3">
+                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-brand rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground">{done}/{total} · {pct}%</span>
+                      </div>
+                    )}
+
+                    {qMaterials.length === 0 ? (
+                      <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
+                        <GraduationCap size={28} className="opacity-20" />
+                        <p className="text-sm">No items in {label} yet.</p>
                         <button
                           onClick={() => setModal({ open: true, quarter: key, item: null })}
                           className="text-xs text-brand hover:underline font-medium"
                         >
                           + Add your first item
                         </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-5 py-2.5">Material</th>
-                            <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5 hidden sm:table-cell">Type</th>
-                            <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Cadre</th>
-                            <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Status</th>
-                            <th className="px-3 py-2.5 w-16"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {qMaterials.map(mat => {
-                            const TypeIcon = TYPE_ICONS[mat.type] ?? GraduationCap;
-                            return (
-                              <tr key={mat.id} className="border-b border-border/40 last:border-0 hover:bg-muted/10 transition-colors">
-                                <td className="px-5 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <TypeIcon size={13} className="text-muted-foreground flex-shrink-0" />
-                                    <div>
-                                      <p className="text-sm font-medium leading-tight">{mat.title}</p>
-                                      {mat.url && (
-                                        <a href={mat.url} target="_blank" rel="noopener noreferrer"
-                                          className="text-[10px] text-brand hover:underline flex items-center gap-1 mt-0.5">
-                                          <ExternalLink size={9} /> Open link
-                                        </a>
-                                      )}
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-5 py-2.5">Material</th>
+                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5 hidden sm:table-cell">Type</th>
+                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Cadre</th>
+                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Status</th>
+                              <th className="px-3 py-2.5 w-16"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {qMaterials.map(mat => {
+                              const TypeIcon = TYPE_ICONS[mat.type] ?? GraduationCap;
+                              return (
+                                <tr key={mat.id} className="border-b border-border/40 last:border-0 hover:bg-muted/10 transition-colors">
+                                  <td className="px-5 py-3">
+                                    <div className="flex items-center gap-2">
+                                      <TypeIcon size={13} className="text-muted-foreground flex-shrink-0" />
+                                      <div>
+                                        <p className="text-sm font-medium leading-tight">{mat.title}</p>
+                                        {mat.url && (
+                                          <a href={mat.url} target="_blank" rel="noopener noreferrer"
+                                            className="text-[10px] text-brand hover:underline flex items-center gap-1 mt-0.5">
+                                            <ExternalLink size={9} /> Open link
+                                          </a>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                </td>
-                                <td className="px-3 py-3 hidden sm:table-cell">
-                                  <span className="text-xs text-muted-foreground">{TYPE_LABELS[mat.type]}</span>
-                                </td>
-                                <td className="px-3 py-3">
-                                  <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", CADRE_STYLES[mat.cadre])}>
-                                    {CADRE_LABELS[mat.cadre]}
-                                  </Badge>
-                                </td>
-                                <td className="px-3 py-3">
-                                  <Badge variant="outline" className={cn("text-[10px]", STATUS_STYLES[mat.status])}>
-                                    {STATUS_LABELS[mat.status]}
-                                  </Badge>
-                                </td>
-                                <td className="px-3 py-3">
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => setModal({ open: true, quarter: key, item: mat })}
-                                      className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                    >
-                                      <Pencil size={12} />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDelete(mat.id)}
-                                      className="p-1 rounded text-muted-foreground hover:text-status-overdue hover:bg-muted transition-colors"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                                  </td>
+                                  <td className="px-3 py-3 hidden sm:table-cell">
+                                    <span className="text-xs text-muted-foreground">{TYPE_LABELS[mat.type]}</span>
+                                  </td>
+                                  <td className="px-3 py-3">
+                                    <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", CADRE_STYLES[mat.cadre])}>
+                                      {CADRE_LABELS[mat.cadre]}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-3 py-3">
+                                    <Badge variant="outline" className={cn("text-[10px]", STATUS_STYLES[mat.status])}>
+                                      {STATUS_LABELS[mat.status]}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-3 py-3">
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => setModal({ open: true, quarter: key, item: mat })}
+                                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                      >
+                                        <Pencil size={12} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDelete(mat.id)}
+                                        className="p-1 rounded text-muted-foreground hover:text-status-overdue hover:bg-muted transition-colors"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
 
-                  <div className="px-5 py-3 border-t border-border/50">
-                    <button
-                      onClick={() => setModal({ open: true, quarter: key, item: null })}
-                      className="flex items-center gap-1.5 text-xs text-brand hover:text-brand/80 font-medium transition-colors"
-                    >
-                      <Plus size={13} /> Add learning item
-                    </button>
+                    <div className="px-5 py-3 border-t border-border/50">
+                      <button
+                        onClick={() => setModal({ open: true, quarter: key, item: null })}
+                        className="flex items-center gap-1.5 text-xs text-brand hover:text-brand/80 font-medium transition-colors"
+                      >
+                        <Plus size={13} /> Add learning item
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <MaterialModal
         open={modal.open}
