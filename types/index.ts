@@ -4,6 +4,8 @@ export type TaskStatus = "pending" | "in_progress" | "completed" | "overdue";
 export type TaskPriority = "high" | "medium" | "low";
 export type LearningType = "book" | "course" | "video" | "podcast" | "article" | "other";
 export type LearningStatus = "not_started" | "in_progress" | "completed";
+export type LearningCadre = "personal_cognitive" | "industry_context" | "technical_mastery";
+export type LearningMaterialStatus = "not_started" | "started" | "completed";
 export type NotificationType =
   | "assignment"
   | "collaboration"
@@ -88,6 +90,30 @@ export interface LearningPath {
   created_at: string;
   user?: User;
   brand?: Brand;
+}
+
+export interface LearningCycle {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  materials?: LearningMaterial[];
+}
+
+export interface LearningMaterial {
+  id: string;
+  cycle_id: string;
+  user_id: string;
+  title: string;
+  type: LearningType;
+  cadre: LearningCadre;
+  status: LearningMaterialStatus;
+  url: string | null;
+  notes: string | null;
+  created_at: string;
 }
 
 export interface Notification {
