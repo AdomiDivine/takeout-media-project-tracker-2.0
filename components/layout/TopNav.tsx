@@ -171,7 +171,10 @@ export default function TopNav({ user }: TopNavProps) {
 
               {/* Photo options */}
               <DropdownMenuItem
-                onClick={() => fileInputRef.current?.click()}
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setTimeout(() => fileInputRef.current?.click(), 100);
+                }}
                 className="gap-2 cursor-pointer"
               >
                 <Camera size={14} />
@@ -179,7 +182,10 @@ export default function TopNav({ user }: TopNavProps) {
               </DropdownMenuItem>
               {avatarUrl && (
                 <DropdownMenuItem
-                  onClick={handleEditCurrent}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setTimeout(() => handleEditCurrent(), 100);
+                  }}
                   className="gap-2 cursor-pointer"
                 >
                   <Pencil size={14} />
