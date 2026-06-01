@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import ImageCropModal from "@/components/ui/image-crop-modal";
 
 interface ImageUploadProps {
   currentUrl?: string | null;
@@ -14,35 +15,47 @@ interface ImageUploadProps {
   onUploaded: (url: string) => void;
   placeholder?: React.ReactNode;
   className?: string;
+  enableCrop?: boolean;
 }
 
 const sizeClasses = { sm: "w-16 h-16", md: "w-24 h-24", lg: "w-32 h-32" };
 
 export default function ImageUpload({
   currentUrl, bucket, filePath, shape = "square",
-  size = "md", onUploaded, placeholder, className,
+  size = "md", onUploaded, placeholder, className, enableCrop = false,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(currentUrl ?? null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const radius = shape === "circle" ? "rounded-full" : "rounded-xl";
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (inputRef.current) inputRef.current.value = "";
 
-    setPreview(URL.createObjectURL(file));
+    if (enableCrop) {
+      const objectUrl = URL.createObjectURL(file);
+      setCropSrc(objectUrl);
+    } else {
+      uploadBlob(file);
+    }
+  }
+
+  async function uploadBlob(blobOrFile: Blob | File) {
     setUploading(true);
     setError("");
 
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const supabase = createClient();
+    const previewUrl = URL.createObjectURL(blobOrFile);
+    setPreview(previewUrl);
 
+    const supabase = createClient();
     const { error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(`${filePath}.${ext}`, file, { upsert: true });
+      .upload(`${filePath}.jpg`, blobOrFile, { upsert: true, contentType: "image/jpeg" });
 
     if (uploadError) {
       setError(uploadError.message);
@@ -53,49 +66,68 @@ export default function ImageUpload({
 
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
-      .getPublicUrl(`${filePath}.${ext}`);
+      .getPublicUrl(`${filePath}.jpg`);
 
     onUploaded(publicUrl);
     setUploading(false);
-    // Reset input so same file can be re-selected
-    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function handleCropped(blob: Blob) {
+    setCropSrc(null);
+    uploadBlob(blob);
+  }
+
+  function handleCropClose() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
   }
 
   return (
-    <div className={cn("flex flex-col items-center gap-1.5", className)}>
-      <div
-        className={cn("relative cursor-pointer group flex-shrink-0", sizeClasses[size], radius)}
-        onClick={() => inputRef.current?.click()}
-      >
-        {preview ? (
-          <img src={preview} alt="" className={cn("w-full h-full object-cover", radius)} />
-        ) : (
-          <div className={cn("w-full h-full bg-muted flex items-center justify-center", radius)}>
-            {placeholder ?? <Camera size={20} className="text-muted-foreground" />}
-          </div>
-        )}
+    <>
+      <div className={cn("flex flex-col items-center gap-1.5", className)}>
+        <div
+          className={cn("relative cursor-pointer group flex-shrink-0", sizeClasses[size], radius)}
+          onClick={() => inputRef.current?.click()}
+        >
+          {preview ? (
+            <img src={preview} alt="" className={cn("w-full h-full object-cover", radius)} />
+          ) : (
+            <div className={cn("w-full h-full bg-muted flex items-center justify-center", radius)}>
+              {placeholder ?? <Camera size={20} className="text-muted-foreground" />}
+            </div>
+          )}
 
-        <div className={cn(
-          "absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity",
-          radius
-        )}>
-          {uploading
-            ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            : <Camera size={16} className="text-white" />
-          }
+          <div className={cn(
+            "absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity",
+            radius
+          )}>
+            {uploading
+              ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <Camera size={16} className="text-white" />
+            }
+          </div>
+
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFile}
+          />
         </div>
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          className="hidden"
-          onChange={handleFile}
-        />
+        {error && <p className="text-xs text-status-overdue text-center">{error}</p>}
+        {!error && <p className="text-xs text-muted-foreground">Click to upload</p>}
       </div>
 
-      {error && <p className="text-xs text-status-overdue text-center">{error}</p>}
-      {!error && <p className="text-xs text-muted-foreground">Click to upload</p>}
-    </div>
+      {cropSrc && (
+        <ImageCropModal
+          open={!!cropSrc}
+          imageSrc={cropSrc}
+          onClose={handleCropClose}
+          onCropped={handleCropped}
+        />
+      )}
+    </>
   );
 }

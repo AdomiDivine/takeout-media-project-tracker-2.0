@@ -126,6 +126,7 @@ export default function SettingsPage() {
             filePath={user?.id ?? "unknown"}
             shape="circle"
             size="lg"
+            enableCrop
             onUploaded={handleAvatarUploaded}
           />
           <div>
