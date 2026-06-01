@@ -71,6 +71,7 @@ export default function SettingsPage() {
     const supabase = createClient();
     await supabase.from("users").update({ avatar_url: url }).eq("id", user.id);
     setUser(prev => prev ? { ...prev, avatar_url: url } : prev);
+    window.dispatchEvent(new CustomEvent("tm-slate:avatar-updated", { detail: { url } }));
   }
 
   async function handleSave(e: React.FormEvent) {
