@@ -34,18 +34,22 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
   const [addUserId, setAddUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
     if (!open) return;
     if (defaultProjectId) setProjectId(defaultProjectId);
     async function fetchData() {
       const supabase = createClient();
-      const [{ data: users }, { data: proj }] = await Promise.all([
+      const { data: { user } } = await supabase.auth.getUser();
+      const [{ data: users }, { data: proj }, { data: profile }] = await Promise.all([
         supabase.from("users").select("*").order("name"),
         defaultProjectId ? { data: null } : supabase.from("projects").select("*").eq("status", "active").order("name"),
+        user ? supabase.from("users").select("role").eq("id", user.id).single() : Promise.resolve({ data: null }),
       ]);
       if (users) setAllUsers(users as User[]);
       if (proj) setProjects(proj as Project[]);
+      if (profile) setUserRole(profile.role);
     }
     fetchData();
   }, [open, defaultProjectId]);
@@ -174,8 +178,8 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
             <Input id="attachment" type="url" placeholder="Google Drive, Figma, Docs link…" value={attachmentUrl} onChange={e => setAttachmentUrl(e.target.value)} />
           </div>
 
-          {/* Member assignment */}
-          <div className="space-y-3 pt-2 border-t border-border">
+          {/* Member assignment — hidden for plain members */}
+          {["super_admin", "admin", "team_lead"].includes(userRole) && <div className="space-y-3 pt-2 border-t border-border">
             <Label>Assign members <span className="text-muted-foreground">(optional)</span></Label>
 
             {assignedMembers.length > 0 && (
@@ -224,7 +228,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
                 </Button>
               </div>
             )}
-          </div>
+          </div>}
 
           {error && <p className="text-sm text-status-overdue">{error}</p>}
 
