@@ -38,14 +38,13 @@ export default function ImageUpload({
     if (inputRef.current) inputRef.current.value = "";
 
     if (enableCrop) {
-      const objectUrl = URL.createObjectURL(file);
-      setCropSrc(objectUrl);
+      setCropSrc(URL.createObjectURL(file));
     } else {
-      uploadBlob(file);
+      uploadBlob(file, file.name.split(".").pop() ?? "jpg");
     }
   }
 
-  async function uploadBlob(blobOrFile: Blob | File) {
+  async function uploadBlob(blobOrFile: Blob | File, ext = "jpg") {
     setUploading(true);
     setError("");
 
@@ -53,9 +52,10 @@ export default function ImageUpload({
     setPreview(previewUrl);
 
     const supabase = createClient();
+    const storageKey = `${filePath}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(`${filePath}.jpg`, blobOrFile, { upsert: true, contentType: "image/jpeg" });
+      .upload(storageKey, blobOrFile, { upsert: true });
 
     if (uploadError) {
       setError(uploadError.message);
@@ -66,7 +66,7 @@ export default function ImageUpload({
 
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
-      .getPublicUrl(`${filePath}.jpg`);
+      .getPublicUrl(storageKey);
 
     onUploaded(publicUrl);
     setUploading(false);
@@ -74,7 +74,7 @@ export default function ImageUpload({
 
   function handleCropped(blob: Blob) {
     setCropSrc(null);
-    uploadBlob(blob);
+    uploadBlob(blob, "jpg");
   }
 
   function handleCropClose() {
