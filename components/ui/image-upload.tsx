@@ -68,7 +68,9 @@ export default function ImageUpload({
       .from(bucket)
       .getPublicUrl(storageKey);
 
-    onUploaded(publicUrl);
+    const urlWithBust = `${publicUrl}?t=${Date.now()}`;
+    setPreview(urlWithBust);
+    onUploaded(urlWithBust);
     setUploading(false);
   }
 
