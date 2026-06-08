@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types";
 
 export default function NotificationBell({ userId }: { userId: string }) {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -18,7 +20,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
     const supabase = createClient();
     const { data } = await supabase
       .from("notifications")
-      .select("*")
+      .select("*, task:tasks(id, project_id)")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -35,10 +37,16 @@ export default function NotificationBell({ userId }: { userId: string }) {
     setNotifications(prev => prev.map(n => ({ ...n, read_status: true })));
   }
 
-  async function markOneRead(id: string) {
+  async function markOneRead(n: Notification) {
     const supabase = createClient();
-    await supabase.from("notifications").update({ read_status: true }).eq("id", id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_status: true } : n));
+    await supabase.from("notifications").update({ read_status: true }).eq("id", n.id);
+    setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read_status: true } : x));
+
+    const projectId = (n as any).task?.project_id;
+    if (projectId) {
+      setOpen(false);
+      router.push(`/projects/${projectId}`);
+    }
   }
 
   useEffect(() => {
@@ -97,7 +105,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
               notifications.map(n => (
                 <button
                   key={n.id}
-                  onClick={() => markOneRead(n.id)}
+                  onClick={() => markOneRead(n)}
                   className={cn(
                     "w-full text-left px-4 py-3 flex gap-3 hover:bg-muted transition-colors border-b border-border/50 last:border-0",
                     !n.read_status && "bg-brand/5"
