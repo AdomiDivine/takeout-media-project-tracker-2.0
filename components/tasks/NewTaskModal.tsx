@@ -57,6 +57,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
   function reset() {
     setName(""); setDescription(""); setProjectId(""); setDeadline(""); setPriority("medium");
     setBlocker(""); setAttachmentUrl(""); setAssignedMembers([]); setAddUserId(""); setError("");
+    setUserRole("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -178,8 +179,8 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
             <Input id="attachment" type="url" placeholder="Google Drive, Figma, Docs link…" value={attachmentUrl} onChange={e => setAttachmentUrl(e.target.value)} />
           </div>
 
-          {/* Member assignment — hidden for plain members */}
-          {["super_admin", "admin", "team_lead"].includes(userRole) && <div className="space-y-3 pt-2 border-t border-border">
+          {/* Member assignment — only for admins/team leads, hidden while role is loading */}
+          {userRole !== "" && userRole !== "member" && <div className="space-y-3 pt-2 border-t border-border">
             <Label>Assign members <span className="text-muted-foreground">(optional)</span></Label>
 
             {assignedMembers.length > 0 && (
