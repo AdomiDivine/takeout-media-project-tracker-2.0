@@ -85,7 +85,6 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
             <ImageUpload
               currentUrl={avatarUrl || null}
               bucket="project-avatars"
-              filePath={project?.id ?? "unknown"}
               shape="square"
               size="md"
               onUploaded={setAvatarUrl}

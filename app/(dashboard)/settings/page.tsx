@@ -124,7 +124,6 @@ export default function SettingsPage() {
           <ImageUpload
             currentUrl={avatarUrl || null}
             bucket="avatars"
-            filePath={user?.id ?? "unknown"}
             shape="circle"
             size="lg"
             enableCrop

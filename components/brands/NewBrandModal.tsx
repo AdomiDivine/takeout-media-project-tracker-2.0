@@ -75,7 +75,6 @@ export default function NewBrandModal({ open, onClose, onCreated }: NewBrandModa
             <ImageUpload
               currentUrl={avatarUrl || null}
               bucket="project-avatars"
-              filePath={tempPath}
               shape="square"
               size="md"
               onUploaded={setAvatarUrl}

@@ -77,7 +77,6 @@ export default function EditBrandModal({ open, brand, onClose, onUpdated }: Edit
             <ImageUpload
               currentUrl={avatarUrl || null}
               bucket="project-avatars"
-              filePath={brand?.id ?? "unknown"}
               shape="square"
               size="md"
               onUploaded={setAvatarUrl}
