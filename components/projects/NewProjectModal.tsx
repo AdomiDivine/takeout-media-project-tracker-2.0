@@ -30,7 +30,6 @@ export default function NewProjectModal({ open, onClose, onCreated, defaultBrand
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [tempPath] = useState(() => `temp-${Date.now()}`);
 
   useEffect(() => {
     if (!open) return;
@@ -86,7 +85,6 @@ export default function NewProjectModal({ open, onClose, onCreated, defaultBrand
             <ImageUpload
               currentUrl={avatarUrl || null}
               bucket="project-avatars"
-              filePath={tempPath}
               shape="square"
               size="md"
               onUploaded={setAvatarUrl}

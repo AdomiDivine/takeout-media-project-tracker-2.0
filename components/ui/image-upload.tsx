@@ -4,12 +4,12 @@ import { useRef, useState } from "react";
 import { Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import {v4} from "uuid"
 import ImageCropModal from "@/components/ui/image-crop-modal";
 
 interface ImageUploadProps {
   currentUrl?: string | null;
   bucket: string;
-  filePath: string;
   shape?: "circle" | "square";
   size?: "sm" | "md" | "lg";
   onUploaded: (url: string) => void;
@@ -21,7 +21,7 @@ interface ImageUploadProps {
 const sizeClasses = { sm: "w-16 h-16", md: "w-24 h-24", lg: "w-32 h-32" };
 
 export default function ImageUpload({
-  currentUrl, bucket, filePath, shape = "square",
+  currentUrl, bucket,  shape = "square",
   size = "md", onUploaded, placeholder, className, enableCrop = false,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +52,7 @@ export default function ImageUpload({
     setPreview(previewUrl);
 
     const supabase = createClient();
-    const storageKey = `${filePath}.${ext}`;
+    const storageKey = `${v4()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(storageKey, blobOrFile, { upsert: true });
