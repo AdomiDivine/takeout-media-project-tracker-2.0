@@ -131,15 +131,12 @@ export default function MiniCalendar({ tasks }: Props) {
               const isToday = isSameDay(day, today);
               const isCurrentMonth = isSameMonth(day, currentMonth);
               const isSelected = isSameDay(day, selectedDay);
-              const dayKey = format(day, "yyyy-MM-dd");
-              const hasCreated = createdMap.has(dayKey);
-              const hasDue = deadlineMap.has(dayKey);
 
               return (
                 <button
                   key={day.toISOString()}
                   onClick={() => setSelectedDay(day)}
-                  className={`relative text-center text-xs rounded-full w-7 h-7 mx-auto flex flex-col items-center justify-center transition-colors ${
+                  className={`text-center text-xs rounded-full w-7 h-7 mx-auto flex items-center justify-center transition-colors ${
                     isToday
                       ? "bg-brand text-white font-bold"
                       : isSelected
@@ -149,45 +146,24 @@ export default function MiniCalendar({ tasks }: Props) {
                       : "text-muted-foreground"
                   }`}
                 >
-                  <span className="leading-none">{format(day, "d")}</span>
-                  {(hasCreated || hasDue) && (
-                    <span className="absolute bottom-0.5 flex gap-0.5 justify-center">
-                      {hasCreated && <span className="w-1 h-1 rounded-full bg-blue-400" />}
-                      {hasDue && <span className="w-1 h-1 rounded-full bg-amber-400" />}
-                    </span>
-                  )}
+                  {format(day, "d")}
                 </button>
               );
             })}
           </div>
 
-          {/* Legend */}
-          <div className="flex gap-3 mt-2 mb-1">
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full bg-blue-400" />Added</span>
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />Due</span>
-          </div>
-
           {/* Day detail */}
-          <div className="mt-2 pt-2 border-t border-border min-h-[40px]">
+          <div className="mt-3 pt-3 border-t border-border min-h-[40px]">
             <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">{format(selectedDay, "MMMM d, yyyy")}</p>
-            {selCreated.length === 0 && selDue.length === 0 && (
+            {selCreated.length === 0 && selDue.length === 0 ? (
               <p className="text-xs text-muted-foreground">No tasks on this day</p>
-            )}
-            {selCreated.length > 0 && (
-              <div className="mb-1">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Added</p>
-                {selCreated.map(t => (
-                  <TaskRow key={`c-${t.id}`} task={t} label={(t.project as any)?.name} />
+            ) : (
+              <>
+                {/* deduplicate tasks that appear in both lists */}
+                {Array.from(new Map([...selCreated, ...selDue].map(t => [t.id, t])).values()).map(t => (
+                  <TaskRow key={t.id} task={t} label={(t.project as any)?.name} />
                 ))}
-              </div>
-            )}
-            {selDue.length > 0 && (
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Due</p>
-                {selDue.map(t => (
-                  <TaskRow key={`d-${t.id}`} task={t} label={(t.project as any)?.name} />
-                ))}
-              </div>
+              </>
             )}
           </div>
         </>
