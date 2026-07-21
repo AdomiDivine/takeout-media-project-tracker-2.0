@@ -15,7 +15,6 @@ const PROJECT_STATUSES = [
   { value: "active",    label: "Active" },
   { value: "on_hold",   label: "On Hold" },
   { value: "completed", label: "Completed" },
-  { value: "archived",  label: "Archived" },
 ];
 
 interface EditProjectModalProps {

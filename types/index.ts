@@ -1,5 +1,5 @@
 export type UserRole = "super_admin" | "admin" | "team_lead" | "member";
-export type ProjectStatus = "active" | "on_hold" | "completed" | "archived";
+export type ProjectStatus = "active" | "on_hold" | "completed";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "overdue";
 export type TaskPriority = "high" | "medium" | "low";
 export type LearningType = "book" | "course" | "video" | "podcast" | "article" | "other";

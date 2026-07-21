@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
+import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity";
 import type { Project, TaskPriority, TaskStatus, User } from "@/types";
+
+const todayStr = () => format(new Date(), "yyyy-MM-dd");
 
 interface NewTaskModalProps {
   open: boolean;
@@ -24,7 +27,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const [deadline, setDeadline] = useState(todayStr());
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [blocker, setBlocker] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState("");
@@ -53,8 +56,18 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
     fetchData();
   }, [open, defaultProjectId]);
 
+  // Project keyword suggestions based on task name
+  const suggestedProjects = useMemo(() => {
+    if (name.length < 3 || projects.length === 0 || defaultProjectId) return [];
+    const words = name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    if (words.length === 0) return [];
+    return projects
+      .filter(p => words.some(w => p.name.toLowerCase().includes(w)))
+      .slice(0, 3);
+  }, [name, projects, defaultProjectId]);
+
   function reset() {
-    setName(""); setDescription(""); setProjectId(""); setDeadline(""); setPriority("medium");
+    setName(""); setDescription(""); setProjectId(""); setDeadline(todayStr()); setPriority("medium");
     setBlocker(""); setAttachmentUrl(""); setAssignedMembers([]); setError("");
     setUserRole("");
   }
@@ -113,8 +126,26 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-2">
-            <Label htmlFor="task-name">Task name *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="task-name">Task name *</Label>
+              <span className="text-[11px] text-muted-foreground">Started: {format(new Date(), "MMM d, yyyy")}</span>
+            </div>
             <Input id="task-name" placeholder="What needs to be done?" value={name} onChange={e => setName(e.target.value)} required />
+            {suggestedProjects.length > 0 && !projectId && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[11px] text-muted-foreground">Suggested:</span>
+                {suggestedProjects.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setProjectId(p.id)}
+                    className="text-[11px] px-2 py-0.5 rounded-full bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -150,7 +181,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="deadline">Deadline *</Label>
+              <Label htmlFor="deadline">Due date *</Label>
               <Input id="deadline" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} required />
             </div>
             <div className="space-y-2">

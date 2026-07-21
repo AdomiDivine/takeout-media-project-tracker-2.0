@@ -7,6 +7,7 @@ import type { Task, TaskStats } from "@/types";
 export function useTaskStats() {
   const [stats, setStats] = useState<TaskStats>({ total: 0, completed: 0, in_progress: 0, pending: 0, overdue: 0 });
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
@@ -52,6 +53,7 @@ export function useTaskStats() {
 
     setStats(newStats);
     setUpcomingTasks(upcoming);
+    setAllTasks(allTasks);
     setLoading(false);
   }, []);
 
@@ -65,5 +67,5 @@ export function useTaskStats() {
     return () => { supabase.removeChannel(channel); };
   }, [fetch]);
 
-  return { stats, upcomingTasks, loading };
+  return { stats, upcomingTasks, allTasks, loading };
 }

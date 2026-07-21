@@ -9,7 +9,7 @@ import TaskDonutChart from "./TaskDonutChart";
 import QuickActions from "./QuickActions";
 
 export default function DashboardShell() {
-  const { stats, upcomingTasks, loading } = useTaskStats();
+  const { stats, upcomingTasks, allTasks, loading } = useTaskStats();
 
   return (
     <div className="flex gap-5 h-full">
@@ -28,7 +28,7 @@ export default function DashboardShell() {
 
       {/* Right panel */}
       <div className="w-64 flex-shrink-0 space-y-4">
-        <MiniCalendar />
+        <MiniCalendar tasks={allTasks} />
         <UpcomingDeadlines tasks={upcomingTasks} />
         <TaskDonutChart stats={stats} />
         <QuickActions />
