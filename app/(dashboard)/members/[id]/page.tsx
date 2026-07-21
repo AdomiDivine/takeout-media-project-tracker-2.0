@@ -133,7 +133,10 @@ export default function MemberDetailPage() {
         </div>
         <div>
           <h2 className="text-xl font-bold">{member.name}</h2>
-          <p className="text-sm text-muted-foreground">{member.email}</p>
+          {member.job_title && (
+            <p className="text-sm font-medium text-brand mt-0.5">{member.job_title}</p>
+          )}
+          <p className="text-sm text-muted-foreground mt-0.5">{member.email}</p>
           <div className="flex items-center gap-2 mt-2">
             <Badge variant="outline" className={cn("text-xs", ROLE_STYLES[member.role])}>
               {ROLE_LABELS[member.role]}

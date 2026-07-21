@@ -28,6 +28,7 @@ export default function SettingsPage() {
   const membersRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -47,6 +48,7 @@ export default function SettingsPage() {
       if (data) {
         setUser(data as User);
         setName(data.name);
+        setJobTitle(data.job_title ?? "");
         setAvatarUrl(data.avatar_url ?? "");
 
         if (["super_admin", "admin"].includes(data.role)) {
@@ -80,7 +82,7 @@ export default function SettingsPage() {
     setLoading(true); setError(""); setSaved(false);
 
     const supabase = createClient();
-    const { error: updateError } = await supabase.from("users").update({ name }).eq("id", user.id);
+    const { error: updateError } = await supabase.from("users").update({ name, job_title: jobTitle || null }).eq("id", user.id);
 
     setLoading(false);
     if (updateError) { setError(updateError.message); return; }
@@ -143,12 +145,22 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="settings-job-title">Job title <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <Input
+              id="settings-job-title"
+              placeholder="e.g. Graphic Designer, Content Writer…"
+              value={jobTitle}
+              onChange={e => setJobTitle(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label>Email</Label>
             <Input value={user?.email ?? ""} disabled className="opacity-60 cursor-not-allowed" />
           </div>
 
           <div className="space-y-2">
-            <Label>Role</Label>
+            <Label>Platform role</Label>
             <Input value={roleLabels[user?.role ?? ""] ?? user?.role ?? ""} disabled className="opacity-60 cursor-not-allowed" />
           </div>
 

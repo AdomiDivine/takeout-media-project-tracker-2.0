@@ -3,19 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { User } from "@/types";
-
-const ROLE_STYLES: Record<string, string> = {
-  team_lead: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  member:    "bg-muted text-muted-foreground border-border",
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  team_lead: "Team Lead",
-  member:    "Member",
-};
 
 export default function MembersPage() {
   const [members, setMembers] = useState<User[]>([]);
@@ -75,7 +63,7 @@ export default function MembersPage() {
         {/* Table header */}
         <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-4 px-5 py-3 border-b border-border bg-muted/30">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Member</p>
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Role</p>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Job Title</p>
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-center">Total</p>
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-center">Active</p>
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-center">Done</p>
@@ -109,12 +97,8 @@ export default function MembersPage() {
                 </div>
               </div>
 
-              {/* Role */}
-              <div>
-                <Badge variant="outline" className={cn("text-[10px]", ROLE_STYLES[m.role] ?? "bg-muted text-muted-foreground border-border")}>
-                  {ROLE_LABELS[m.role] ?? m.role}
-                </Badge>
-              </div>
+              {/* Job title */}
+              <p className="text-sm text-muted-foreground truncate">{m.job_title || "—"}</p>
 
               {/* Task counts */}
               <p className="text-sm font-semibold text-center">{c.total}</p>

@@ -20,6 +20,7 @@ export interface User {
   email: string;
   role: UserRole;
   avatar_url: string | null;
+  job_title: string | null;
   created_at: string;
 }
 
