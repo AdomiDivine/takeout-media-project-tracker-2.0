@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
 
     await sendEmail({
       to: assigneeEmail,
-      subject: `You have a new task on TM Slate — "${task.name}"`,
-      text: `Hi ${displayName}, ${assignerName} has assigned you a new task: "${task.name}" on the ${projectName} project. Deadline: ${deadline}. Priority: ${priorityLabel}. Log in to TM Slate to get started.`,
+      subject: `You have a new task on TM WORKROOM — "${task.name}"`,
+      text: `Hi ${displayName}, ${assignerName} has assigned you a new task: "${task.name}" on the ${projectName} project. Deadline: ${deadline}. Priority: ${priorityLabel}. Log in to TM WORKROOM to get started.`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">TM Slate</p>
+                  <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">TM WORKROOM</p>
                   <h1 style="margin:8px 0 0;font-size:26px;color:#ffffff;font-weight:700;line-height:1.2;">New Task Assigned</h1>
                 </td>
                 <td align="right" style="vertical-align:top;">
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
           <td style="padding:36px 40px 0;">
             <p style="margin:0;font-size:16px;color:#111827;font-weight:600;">Hi ${displayName},</p>
             <p style="margin:12px 0 0;font-size:15px;color:#6b7280;line-height:1.6;">
-              <strong style="color:#e8460a;">${assignerName}</strong> has assigned you a new task on TM Slate.
+              <strong style="color:#e8460a;">${assignerName}</strong> has assigned you a new task on TM WORKROOM.
               Here's everything you need to know to hit the ground running:
             </p>
           </td>
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
         <tr>
           <td style="padding:0 40px 24px;">
             <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
-              As you work through this task, remember to keep your progress updated on TM Slate —
+              As you work through this task, remember to keep your progress updated on TM WORKROOM —
               it helps the whole team stay aligned and ensures nothing falls through the cracks.
               Log in, open the task, and use the progress bar to show where you're at.
             </p>
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
           <td style="padding:0 40px 36px;" align="center">
             <a href="https://tm-slate.vercel.app"
                style="display:inline-block;background:linear-gradient(135deg,#e8460a,#ff6b35);color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 36px;border-radius:10px;letter-spacing:0.3px;">
-              Open TM Slate →
+              Open TM WORKROOM →
             </a>
           </td>
         </tr>
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
         <tr>
           <td style="padding:24px 40px;">
             <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">
-              This is an automated notification from <strong>TM Slate</strong> — Takeout Media's project management platform.
+              This is an automated notification from <strong>TM WORKROOM</strong> — Takeout Media's project management platform.
               If you believe this was sent in error, please reach out to your team administrator.
             </p>
           </td>

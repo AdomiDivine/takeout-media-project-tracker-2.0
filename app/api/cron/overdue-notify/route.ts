@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
           html: `
             <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0f0f0f; color: #e5e5e5; border-radius: 12px; overflow: hidden;">
               <div style="background: #c0392b; padding: 24px 32px;">
-                <h1 style="margin: 0; font-size: 20px; color: #fff;">TM Slate — Overdue Alert</h1>
+                <h1 style="margin: 0; font-size: 20px; color: #fff;">TM WORKROOM — Overdue Alert</h1>
               </div>
               <div style="padding: 32px;">
                 <h2 style="margin: 0 0 8px; font-size: 18px; color: #fff;">Task Overdue</h2>
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
                   </table>
                 </div>
 
-                <p style="margin: 0; font-size: 12px; color: #666;">This is an automated notification from TM Slate.</p>
+                <p style="margin: 0; font-size: 12px; color: #666;">This is an automated notification from TM WORKROOM.</p>
               </div>
             </div>
           `,

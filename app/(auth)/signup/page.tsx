@@ -49,7 +49,7 @@ export default function SignupPage() {
     <Card className="border-border bg-card">
       <CardHeader>
         <CardTitle className="text-xl">Create your account</CardTitle>
-        <CardDescription>Join your team on TM Slate</CardDescription>
+        <CardDescription>Join your team on TM WORKROOM</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSignup} className="space-y-4">
