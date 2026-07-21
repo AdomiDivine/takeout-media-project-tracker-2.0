@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, type ElementType } from "react";
-import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText, Filter, Check, Download, X } from "lucide-react";
+import { GraduationCap, Plus, ChevronDown, Pencil, Trash2, ExternalLink, BookOpen, Tv, Headphones, FileText, Filter, Check, Download, X, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -62,17 +62,21 @@ const STATUS_LABELS: Record<string, string> = {
 
 /* ── export ──────────────────────────────────────────── */
 
-function exportCSV(materials: LearningMaterial[], activeFilter: string) {
-  const filtered = activeFilter === "all" ? materials : materials.filter(m => m.status === activeFilter);
-  const sorted = [...filtered].sort((a, b) => a.quarter.localeCompare(b.quarter));
-  const headers = ["Quarter", "Title", "Type", "Cadre", "Status", "URL", "Notes"];
-  const rows = sorted.map(m => [
-    m.quarter, m.title,
-    TYPE_LABELS[m.type] ?? m.type,
-    CADRE_LABELS[m.cadre] ?? m.cadre,
-    STATUS_LABELS[m.status] ?? m.status,
-    m.url ?? "", m.notes ?? "",
-  ]);
+function exportCSV(materials: (LearningMaterial & { userName?: string })[], filename: string, includePersonColumn = false) {
+  const sorted = [...materials].sort((a, b) => a.quarter.localeCompare(b.quarter));
+  const headers = includePersonColumn
+    ? ["Person", "Quarter", "Title", "Type", "Cadre", "Status", "URL", "Notes"]
+    : ["Quarter", "Title", "Type", "Cadre", "Status", "URL", "Notes"];
+  const rows = sorted.map(m => {
+    const base = [
+      m.quarter, m.title,
+      TYPE_LABELS[m.type] ?? m.type,
+      CADRE_LABELS[m.cadre] ?? m.cadre,
+      STATUS_LABELS[m.status] ?? m.status,
+      m.url ?? "", m.notes ?? "",
+    ];
+    return includePersonColumn ? [m.userName ?? "", ...base] : base;
+  });
   const csv = [headers, ...rows]
     .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     .join("\n");
@@ -80,7 +84,7 @@ function exportCSV(materials: LearningMaterial[], activeFilter: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `learning-path-${YEAR}${activeFilter !== "all" ? `-${activeFilter}` : ""}.csv`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -88,7 +92,7 @@ function exportCSV(materials: LearningMaterial[], activeFilter: string) {
 /* ── page ────────────────────────────────────────────── */
 
 export default function LearningPage() {
-  const [materials, setMaterials] = useState<LearningMaterial[]>([]);
+  const [materials, setMaterials] = useState<(LearningMaterial & { userName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedQ, setExpandedQ] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
@@ -97,26 +101,74 @@ export default function LearningPage() {
   const [modal, setModal] = useState<{ open: boolean; quarter: string; item: LearningMaterial | null }>({
     open: false, quarter: "Q1", item: null,
   });
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>(""); // "" = all (admin only)
+  const [personFilterOpen, setPersonFilterOpen] = useState(false);
+  const personFilterRef = useRef<HTMLDivElement>(null);
 
-  async function fetchData() {
+  async function fetchData(targetUserId?: string) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
-      .from("learning_materials")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("year", YEAR)
-      .order("created_at");
-    if (data) setMaterials(data as LearningMaterial[]);
+
+    const { data: profile } = await supabase
+      .from("users").select("role").eq("id", user.id).single();
+
+    const admin = profile?.role === "admin" || profile?.role === "super_admin";
+    setIsAdmin(admin);
+    setCurrentUserId(user.id);
+
+    if (admin) {
+      // Fetch all users for the person filter
+      const { data: usersData } = await supabase
+        .from("users").select("id, name").order("name");
+      if (usersData) setAllUsers(usersData);
+
+      // Fetch materials for selected user or all users
+      const userId = targetUserId ?? selectedUserId;
+      let query = supabase
+        .from("learning_materials")
+        .select("*, user:users(name)")
+        .eq("year", YEAR)
+        .order("created_at");
+
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data } = await query;
+      if (data) {
+        setMaterials(data.map((m: any) => ({ ...m, userName: m.user?.name ?? "" })));
+      }
+    } else {
+      // Regular user: only their own materials
+      const { data } = await supabase
+        .from("learning_materials")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("year", YEAR)
+        .order("created_at");
+      if (data) setMaterials(data as LearningMaterial[]);
+    }
+
     setLoading(false);
   }
 
   useEffect(() => { fetchData(); }, []);
 
+  async function handlePersonSelect(userId: string) {
+    setSelectedUserId(userId);
+    setPersonFilterOpen(false);
+    setLoading(true);
+    await fetchData(userId);
+  }
+
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false);
+      if (personFilterRef.current && !personFilterRef.current.contains(e.target as Node)) setPersonFilterOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -130,6 +182,7 @@ export default function LearningPage() {
 
   const activeFilterLabel = FILTERS.find(f => f.value === filter)?.label;
   const isFiltered = filter !== "all";
+  const selectedUserName = selectedUserId ? allUsers.find(u => u.id === selectedUserId)?.name : null;
 
   if (loading) {
     return (
@@ -147,12 +200,57 @@ export default function LearningPage() {
         <div>
           <h2 className="text-lg font-semibold">Learning Path</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {YEAR} · {isFiltered ? `Showing: ${activeFilterLabel}` : "Click a quarter to expand"}
+            {YEAR}
+            {isAdmin && selectedUserName && ` · ${selectedUserName}`}
+            {isAdmin && !selectedUserName && " · All members"}
+            {!isAdmin && (isFiltered ? ` · Showing: ${activeFilterLabel}` : " · Click a quarter to expand")}
+            {isAdmin && isFiltered && ` · ${activeFilterLabel}`}
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Filter dropdown */}
+          {/* Admin: Person filter */}
+          {isAdmin && (
+            <div className="relative" ref={personFilterRef}>
+              <button
+                onClick={() => setPersonFilterOpen(o => !o)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors",
+                  selectedUserId
+                    ? "border-brand text-brand bg-brand/10"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card"
+                )}
+              >
+                <User size={13} />
+                {selectedUserName ?? "All members"}
+                <ChevronDown size={12} className={cn("transition-transform", personFilterOpen && "rotate-180")} />
+              </button>
+              {personFilterOpen && (
+                <div className="absolute right-0 top-9 z-20 bg-card border border-border rounded-lg shadow-lg py-1 w-52 max-h-64 overflow-y-auto">
+                  <button
+                    onClick={() => handlePersonSelect("")}
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                  >
+                    <span className={!selectedUserId ? "text-brand font-medium" : ""}>All members</span>
+                    {!selectedUserId && <Check size={13} className="text-brand" />}
+                  </button>
+                  <div className="border-t border-border/50 my-1" />
+                  {allUsers.map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => handlePersonSelect(u.id)}
+                      className="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                    >
+                      <span className={selectedUserId === u.id ? "text-brand font-medium" : ""}>{u.name}</span>
+                      {selectedUserId === u.id && <Check size={13} className="text-brand" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Status filter (admins too) */}
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setFilterOpen(o => !o)}
@@ -188,8 +286,8 @@ export default function LearningPage() {
                       <span className={cn(
                         "w-2 h-2 rounded-full flex-shrink-0",
                         f.value === "not_started" && "bg-muted-foreground",
-                        f.value === "started" && "bg-status-in-progress",
-                        f.value === "completed" && "bg-status-completed",
+                        f.value === "started"     && "bg-status-in-progress",
+                        f.value === "completed"   && "bg-status-completed",
                       )} />
                       <span className={filter === f.value ? "text-brand font-medium" : ""}>{f.label}</span>
                     </div>
@@ -205,7 +303,12 @@ export default function LearningPage() {
             size="sm"
             variant="outline"
             className="gap-1.5"
-            onClick={() => exportCSV(materials, filter)}
+            onClick={() => {
+              const filename = selectedUserName
+                ? `learning-path-${selectedUserName.replace(/\s+/g, "-")}-${YEAR}.csv`
+                : `learning-path-all-${YEAR}.csv`;
+              exportCSV(materials, filename, isAdmin && !selectedUserId);
+            }}
             disabled={materials.length === 0}
           >
             <Download size={14} /> Export
@@ -371,6 +474,9 @@ export default function LearningPage() {
                               <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5 hidden sm:table-cell">Type</th>
                               <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Cadre</th>
                               <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Status</th>
+                              {isAdmin && !selectedUserId && (
+                                <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Person</th>
+                              )}
                               <th className="px-3 py-2.5 w-16"></th>
                             </tr>
                           </thead>
@@ -406,20 +512,29 @@ export default function LearningPage() {
                                       {STATUS_LABELS[mat.status]}
                                     </Badge>
                                   </td>
+                                  {isAdmin && !selectedUserId && (
+                                    <td className="px-3 py-3">
+                                      <span className="text-xs text-muted-foreground">{(mat as any).userName ?? "—"}</span>
+                                    </td>
+                                  )}
                                   <td className="px-3 py-3">
                                     <div className="flex items-center gap-1">
-                                      <button
-                                        onClick={() => setModal({ open: true, quarter: key, item: mat })}
-                                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                      >
-                                        <Pencil size={12} />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDelete(mat.id)}
-                                        className="p-1 rounded text-muted-foreground hover:text-status-overdue hover:bg-muted transition-colors"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
+                                      {(!isAdmin || mat.user_id === currentUserId) && (
+                                        <>
+                                          <button
+                                            onClick={() => setModal({ open: true, quarter: key, item: mat })}
+                                            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                          >
+                                            <Pencil size={12} />
+                                          </button>
+                                          <button
+                                            onClick={() => handleDelete(mat.id)}
+                                            className="p-1 rounded text-muted-foreground hover:text-status-overdue hover:bg-muted transition-colors"
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
                                   </td>
                                 </tr>

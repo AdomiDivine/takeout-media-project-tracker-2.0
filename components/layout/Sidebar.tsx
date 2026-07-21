@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, FolderOpen, Settings, LogOut, ChevronDown, ChevronRight, Sun, Moon, Building2, GraduationCap } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, FolderOpen, Settings, LogOut, ChevronDown, ChevronRight, Sun, Moon, Building2, GraduationCap, Users, Bell } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,17 @@ interface SidebarProps {
   projects: Project[];
 }
 
-const navItems = [
+const adminNavItems = [
+  { label: "Dashboard",     href: "/dashboard",  icon: LayoutDashboard },
+  { label: "Members",       href: "/members",    icon: Users },
+  { label: "Projects",      href: "/projects",   icon: FolderOpen },
+  { label: "Tasks",         href: "/tasks",      icon: CheckSquare },
+  { label: "Learning Path", href: "/learning",   icon: GraduationCap },
+  { label: "Reports",       href: "/reports",    icon: BarChart2 },
+  { label: "Activity",      href: "/activity",   icon: Bell },
+];
+
+const userNavItems = [
   { label: "Dashboard",     href: "/dashboard",  icon: LayoutDashboard },
   { label: "My Tasks",      href: "/tasks",      icon: CheckSquare },
   { label: "Brands",        href: "/brands",     icon: Building2 },
@@ -31,6 +41,9 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
   const [brandsOpen, setBrandsOpen] = useState(true);
   const [expandedBrand, setExpandedBrand] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(true);
+
+  const isAdmin = user.role === "admin" || user.role === "super_admin";
+  const navItems = isAdmin ? adminNavItems : userNavItems;
 
   useEffect(() => {
     const stored = localStorage.getItem("theme");
@@ -96,8 +109,8 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
           </ul>
         </div>
 
-        {/* Brands */}
-        <div>
+        {/* Brands — only for non-admin users */}
+        {!isAdmin && <div>
           <button
             onClick={() => setBrandsOpen(!brandsOpen)}
             className="flex items-center justify-between w-full px-2 mb-2"
@@ -184,7 +197,7 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
               })}
             </ul>
           )}
-        </div>
+        </div>}
       </nav>
 
       {/* Bottom */}
