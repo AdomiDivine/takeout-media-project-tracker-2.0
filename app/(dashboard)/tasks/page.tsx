@@ -183,7 +183,7 @@ export default function TasksPage() {
           {/* Table header — desktop only */}
           <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-border bg-muted/30">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Task</span>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Assigned by</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Assigned to</span>
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Deadline</span>
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Priority / Status</span>
             <span />
