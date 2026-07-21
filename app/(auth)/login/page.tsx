@@ -38,7 +38,7 @@ export default function LoginPage() {
     <Card className="border-border bg-card">
       <CardHeader>
         <CardTitle className="text-xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your TM WORKROOM account</CardDescription>
+        <CardDescription>Sign in to your TM Workroom account</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4">

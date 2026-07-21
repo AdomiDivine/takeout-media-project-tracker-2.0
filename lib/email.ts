@@ -26,7 +26,7 @@ export async function sendEmail({
   const transporter = createTransporter();
 
   const info = await transporter.sendMail({
-    from: `"TM WORKROOM" <${process.env.GMAIL_USER}>`,
+    from: `"TM Workroom" <${process.env.GMAIL_USER}>`,
     to,
     subject,
     html,

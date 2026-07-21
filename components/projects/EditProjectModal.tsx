@@ -9,7 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageUpload from "@/components/ui/image-upload";
 import { createClient } from "@/lib/supabase/client";
-import type { Brand, Project, User } from "@/types";
+import type { Brand, Project, ProjectStatus, User } from "@/types";
+
+const PROJECT_STATUSES = [
+  { value: "active",    label: "Active" },
+  { value: "on_hold",   label: "On Hold" },
+  { value: "completed", label: "Completed" },
+  { value: "archived",  label: "Archived" },
+];
 
 interface EditProjectModalProps {
   open: boolean;
@@ -23,6 +30,7 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
   const [description, setDescription] = useState("");
   const [teamLeadId, setTeamLeadId] = useState("");
   const [brandId, setBrandId] = useState("");
+  const [status, setStatus] = useState<ProjectStatus>("active");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [members, setMembers] = useState<User[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -35,6 +43,7 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
     setDescription(project.description ?? "");
     setTeamLeadId(project.team_lead_id ?? "");
     setBrandId(project.brand_id ?? "");
+    setStatus(project.status ?? "active");
     setAvatarUrl(project.avatar_url ?? "");
     setError("");
 
@@ -64,6 +73,7 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
         team_lead_id: teamLeadId || null,
         avatar_url: avatarUrl || null,
         brand_id: brandId || null,
+        status,
       })
       .eq("id", project.id)
       .select("*, team_lead:users!team_lead_id(name)")
@@ -125,6 +135,20 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
                 <SelectItem value="none">— No brand —</SelectItem>
                 {brands.map(b => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-proj-status">Status</Label>
+            <Select value={status} onValueChange={(v) => v && setStatus(v as ProjectStatus)}>
+              <SelectTrigger id="edit-proj-status" className="w-full">
+                <SelectValue>{PROJECT_STATUSES.find(s => s.value === status)?.label}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_STATUSES.map(s => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -40,7 +40,7 @@ function buildEmailHtml(userName: string, message: string, emoji: string, appUrl
           <!-- Header -->
           <tr>
             <td style="padding:28px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.08);">
-              <span style="font-weight:700;font-size:16px;color:#fd4f05;">TM WORKROOM</span>
+              <span style="font-weight:700;font-size:16px;color:#fd4f05;">TM Workroom</span>
               <span style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#6b7280;margin-left:10px;">Takeout Media</span>
             </td>
           </tr>
@@ -52,7 +52,7 @@ function buildEmailHtml(userName: string, message: string, emoji: string, appUrl
               <p style="margin:0 0 28px;font-size:15px;line-height:1.65;color:#d1d5db;">${message}</p>
               <a href="${appUrl}/dashboard"
                 style="display:inline-block;background:#fd4f05;color:#fff;font-weight:600;font-size:14px;padding:11px 22px;border-radius:8px;text-decoration:none;">
-                Open TM WORKROOM →
+                Open TM Workroom →
               </a>
             </td>
           </tr>
@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: `TM WORKROOM <${FROM_EMAIL}>`,
+        from: `TM Workroom <${FROM_EMAIL}>`,
         to:   [user.email],
         subject,
         html,

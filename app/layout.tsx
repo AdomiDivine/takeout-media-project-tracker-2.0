@@ -11,7 +11,7 @@ const elmSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "TM WORKROOM | Takeout Media",
+  title: "TM Workroom | Takeout Media",
   description: "Every project, on slate.",
   icons: { icon: "/favicon.svg" },
 };

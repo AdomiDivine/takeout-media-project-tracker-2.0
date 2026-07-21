@@ -68,7 +68,7 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
     <aside className="fixed left-0 top-0 h-screen w-56 bg-sidebar border-r border-border flex flex-col z-40">
       {/* Logo */}
       <div className="px-4 py-4 border-b border-border">
-        <p className="text-foreground font-bold text-lg leading-tight">TM WORKROOM</p>
+        <p className="text-foreground font-bold text-lg leading-tight">TM Workroom</p>
         <p className="text-muted-foreground text-xs leading-tight mt-0.5">Every project, in the room.</p>
       </div>
 

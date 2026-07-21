@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, X } from "lucide-react";
+import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logActivity } from "@/lib/activity";
 import type { Project, TaskPriority, TaskStatus, User } from "@/types";
@@ -31,7 +31,6 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
   const [projects, setProjects] = useState<Project[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [assignedMembers, setAssignedMembers] = useState<User[]>([]);
-  const [addUserId, setAddUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [userRole, setUserRole] = useState("");
@@ -56,7 +55,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
 
   function reset() {
     setName(""); setDescription(""); setProjectId(""); setDeadline(""); setPriority("medium");
-    setBlocker(""); setAttachmentUrl(""); setAssignedMembers([]); setAddUserId(""); setError("");
+    setBlocker(""); setAttachmentUrl(""); setAssignedMembers([]); setError("");
     setUserRole("");
   }
 
@@ -202,11 +201,18 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
 
             {allUsers.filter(u => !assignedMembers.some(m => m.id === u.id)).length > 0 && (
               <div className="flex gap-2">
-                <Select value={addUserId} onValueChange={(v) => v && setAddUserId(v)}>
+                <Select
+                  value=""
+                  onValueChange={(v) => {
+                    if (!v) return;
+                    const user = allUsers.find(u => u.id === v);
+                    if (user && !assignedMembers.some(m => m.id === v)) {
+                      setAssignedMembers(prev => [...prev, user]);
+                    }
+                  }}
+                >
                   <SelectTrigger className="flex-1 h-9">
-                    <SelectValue placeholder="Add a member…">
-                      {addUserId ? allUsers.find(u => u.id === addUserId)?.name : undefined}
-                    </SelectValue>
+                    <SelectValue placeholder="Select a member to add…" />
                   </SelectTrigger>
                   <SelectContent>
                     {allUsers.filter(u => !assignedMembers.some(m => m.id === u.id)).map(u => (
@@ -214,19 +220,6 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 h-9 flex-shrink-0"
-                  disabled={!addUserId}
-                  onClick={() => {
-                    const user = allUsers.find(u => u.id === addUserId);
-                    if (user) { setAssignedMembers(prev => [...prev, user]); setAddUserId(""); }
-                  }}
-                >
-                  <UserPlus size={14} /> Add
-                </Button>
               </div>
             )}
           </div>}

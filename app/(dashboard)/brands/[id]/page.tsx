@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Building2, FolderOpen, Plus, Pencil } from "lucide-react";
+import { ArrowLeft, Building2, FolderOpen, Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +20,8 @@ export default function BrandPage() {
   const [userRole, setUserRole] = useState("");
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [editBrandOpen, setEditBrandOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function fetchData() {
     const supabase = createClient();
@@ -40,6 +42,13 @@ export default function BrandPage() {
   useEffect(() => { fetchData(); }, [id]);
 
   const canManage = ["super_admin", "admin"].includes(userRole);
+
+  async function handleDeleteBrand() {
+    setDeleting(true);
+    const supabase = createClient();
+    await supabase.from("brands").delete().eq("id", id);
+    router.push("/brands");
+  }
 
   if (loading) {
     return (
@@ -99,9 +108,24 @@ export default function BrandPage() {
           </div>
 
           {canManage && (
-            <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7 flex-shrink-0" onClick={() => setEditBrandOpen(true)}>
-              <Pencil size={12} /> Edit
-            </Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7" onClick={() => setEditBrandOpen(true)}>
+                <Pencil size={12} /> Edit
+              </Button>
+              {!deleteConfirm ? (
+                <Button size="sm" variant="outline" className="gap-1.5 text-xs h-7 text-status-overdue border-status-overdue/30 hover:bg-status-overdue/10" onClick={() => setDeleteConfirm(true)}>
+                  <Trash2 size={12} /> Delete
+                </Button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Sure?</span>
+                  <Button size="sm" className="h-7 text-xs bg-status-overdue hover:bg-status-overdue/90 text-white" onClick={handleDeleteBrand} disabled={deleting}>
+                    {deleting ? "Deleting…" : "Yes, delete"}
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDeleteConfirm(false)}>Cancel</Button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
