@@ -94,10 +94,11 @@ export default function KanbanBoard() {
   }
 
   async function handleDelete(task: Task) {
-    const supabase = createClient();
-    await supabase.from("tasks")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", task.id);
+    await fetch("/api/tasks/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: task.id }),
+    });
     logActivity({ action: `Deleted task "${task.name}"`, projectId: task.project_id });
     refetch();
   }
