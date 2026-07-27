@@ -170,8 +170,8 @@ export default function TopNav({ user }: TopNavProps) {
               </div>
 
               {/* Photo options */}
-              <DropdownMenuItem asChild>
-                <label htmlFor="topnav-avatar-input" className="flex items-center gap-2 cursor-pointer w-full px-2 py-1.5 text-sm rounded-sm hover:bg-accent">
+              <DropdownMenuItem className="p-0">
+                <label htmlFor="topnav-avatar-input" className="flex items-center gap-2 cursor-pointer w-full px-2 py-1.5">
                   <Camera size={14} />
                   Change photo
                 </label>
