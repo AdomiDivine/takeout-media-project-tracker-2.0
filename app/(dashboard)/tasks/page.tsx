@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckSquare, MoreVertical, Calendar, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -43,10 +44,12 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function TasksPage() {
+  const searchParams = useSearchParams();
   const { tasks, loading, refetch } = useTasks();
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [newTaskOpen, setNewTaskOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const initialStatus = (searchParams.get("status") ?? "all") as StatusFilter;
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus);
   const [projectFilter, setProjectFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [projects, setProjects] = useState<Project[]>([]);

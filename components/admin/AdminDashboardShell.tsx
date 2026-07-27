@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Users, Briefcase, Play, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -45,6 +46,7 @@ function getGreeting() {
 }
 
 export default function AdminDashboardShell({ userName }: { userName: string }) {
+  const router = useRouter();
   const [memberCount, setMemberCount] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
   const [tasks, setTasks] = useState<any[]>([]);
@@ -161,13 +163,17 @@ export default function AdminDashboardShell({ userName }: { userName: string }) 
       {/* Stats row */}
       <div className="grid grid-cols-5 gap-4">
         {[
-          { label: "Total Members",       value: memberCount,          icon: Users,         color: "text-blue-400",   bg: "bg-blue-500/10"   },
-          { label: "Active Projects",      value: projectCount,         icon: Briefcase,     color: "text-purple-400", bg: "bg-purple-500/10" },
-          { label: "Tasks In Progress",    value: stats.in_progress,    icon: Play,          color: "text-amber-400",  bg: "bg-amber-500/10"  },
-          { label: "Overdue Tasks",        value: stats.overdue,        icon: AlertTriangle, color: "text-red-400",    bg: "bg-red-500/10"    },
-          { label: "Completed This Week",  value: completedThisWeek,    icon: CheckCircle2,  color: "text-green-400",  bg: "bg-green-500/10"  },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-card border border-border rounded-xl p-4">
+          { label: "Total Members",       value: memberCount,          icon: Users,         color: "text-blue-400",   bg: "bg-blue-500/10",   href: "/members"                    },
+          { label: "Active Projects",      value: projectCount,         icon: Briefcase,     color: "text-purple-400", bg: "bg-purple-500/10", href: "/projects"                   },
+          { label: "Tasks In Progress",    value: stats.in_progress,    icon: Play,          color: "text-amber-400",  bg: "bg-amber-500/10",  href: "/tasks?status=in_progress"   },
+          { label: "Overdue Tasks",        value: stats.overdue,        icon: AlertTriangle, color: "text-red-400",    bg: "bg-red-500/10",    href: "/tasks?status=overdue"       },
+          { label: "Completed This Week",  value: completedThisWeek,    icon: CheckCircle2,  color: "text-green-400",  bg: "bg-green-500/10",  href: "/tasks?status=completed"     },
+        ].map(({ label, value, icon: Icon, color, bg, href }) => (
+          <button
+            key={label}
+            onClick={() => router.push(href)}
+            className="bg-card border border-border rounded-xl p-4 text-left hover:border-brand/40 hover:bg-muted/30 transition-colors cursor-pointer"
+          >
             <div className="flex items-center gap-2 mb-3">
               <div className={cn("p-1.5 rounded-lg", bg, color)}>
                 <Icon size={14} />
@@ -175,7 +181,7 @@ export default function AdminDashboardShell({ userName }: { userName: string }) 
               <p className="text-xs text-muted-foreground leading-tight">{label}</p>
             </div>
             <p className={cn("text-2xl font-bold", color)}>{value}</p>
-          </div>
+          </button>
         ))}
       </div>
 
