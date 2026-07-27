@@ -20,10 +20,17 @@ const QUARTERS = [
   { key: "Q4" as const, label: "Q4", sub: `Oct – Dec ${YEAR}` },
 ];
 
-const FILTERS = [
+const ADMIN_FILTERS = [
   { value: "not_started",  label: "Not Started" },
   { value: "started",      label: "Started" },
   { value: "under_review", label: "Under Review" },
+  { value: "completed",    label: "Completed" },
+];
+
+const MEMBER_FILTERS = [
+  { value: "not_started",  label: "Not Started" },
+  { value: "started",      label: "Started" },
+  { value: "under_review", label: "Finished" },
   { value: "completed",    label: "Completed" },
 ];
 
@@ -56,16 +63,29 @@ const STATUS_STYLES: Record<string, string> = {
   completed:    "bg-status-completed/10 text-status-completed border-status-completed/30",
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const ADMIN_STATUS_LABELS: Record<string, string> = {
   not_started:  "Not Started",
   started:      "Started",
   under_review: "Under Review",
   completed:    "Completed",
 };
 
+const MEMBER_STATUS_LABELS: Record<string, string> = {
+  not_started:  "Not Started",
+  started:      "Started",
+  under_review: "Finished",
+  completed:    "Completed",
+};
+
 /* ── export ──────────────────────────────────────────── */
 
-function exportCSV(materials: (LearningMaterial & { userName?: string })[], filename: string, includePersonColumn = false, adminExport = false) {
+function exportCSV(
+  materials: (LearningMaterial & { userName?: string })[],
+  filename: string,
+  statusLabels: Record<string, string>,
+  includePersonColumn = false,
+  adminExport = false,
+) {
   const sorted = [...materials].sort((a, b) => a.quarter.localeCompare(b.quarter) || (a.month ?? "").localeCompare(b.month ?? ""));
 
   const baseHeaders = ["Quarter", "Month", "Title", "Type", "Cadre", "Status", "Completion Date", "Key Learning", "Application Evidence", "URL", "Notes"];
@@ -83,7 +103,7 @@ function exportCSV(materials: (LearningMaterial & { userName?: string })[], file
       m.title,
       TYPE_LABELS[m.type] ?? m.type,
       CADRE_LABELS[m.cadre] ?? m.cadre,
-      STATUS_LABELS[m.status] ?? m.status,
+      statusLabels[m.status] ?? m.status,
       m.completion_date ?? "",
       m.key_learning ?? "",
       m.application_evidence ?? "",
@@ -205,6 +225,9 @@ export default function LearningPage() {
     await supabase.from("learning_materials").delete().eq("id", id);
     setMaterials(prev => prev.filter(m => m.id !== id));
   }
+
+  const FILTERS = isAdmin ? ADMIN_FILTERS : MEMBER_FILTERS;
+  const STATUS_LABELS = isAdmin ? ADMIN_STATUS_LABELS : MEMBER_STATUS_LABELS;
 
   const activeFilterLabel = FILTERS.find(f => f.value === filter)?.label;
   const isFiltered = filter !== "all";
@@ -334,7 +357,7 @@ export default function LearningPage() {
               const filename = selectedUserName
                 ? `learning-path-${selectedUserName.replace(/\s+/g, "-")}-${YEAR}.csv`
                 : `learning-path-all-${YEAR}.csv`;
-              exportCSV(materials, filename, isAdmin && !selectedUserId, isAdmin);
+              exportCSV(materials, filename, STATUS_LABELS, isAdmin && !selectedUserId, isAdmin);
             }}
             disabled={materials.length === 0}
           >
@@ -418,7 +441,7 @@ export default function LearningPage() {
                             Finish
                           </button>
                         )}
-                        {isAdmin && mat.status === "under_review" && (
+                        {isAdmin && (
                           <button
                             onClick={() => setModal({ open: true, quarter: key, item: mat })}
                             className="px-2 py-1 rounded text-[10px] bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors font-medium whitespace-nowrap"

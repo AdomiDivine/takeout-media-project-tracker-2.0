@@ -25,11 +25,16 @@ const CADRES = [
   { value: "technical_mastery",  label: "Technical Mastery" },
 ];
 
-const STATUSES = [
+const ADMIN_STATUSES = [
   { value: "not_started",  label: "Not Started" },
   { value: "started",      label: "Started" },
   { value: "under_review", label: "Under Review" },
   { value: "completed",    label: "Completed" },
+];
+
+const MEMBER_STATUSES = [
+  { value: "not_started", label: "Not Started" },
+  { value: "started",     label: "Started" },
 ];
 
 const MONTHS = [
@@ -189,9 +194,11 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
     finally { setCompleting(false); }
   }
 
+  const statusOptions = isAdmin ? ADMIN_STATUSES : MEMBER_STATUSES;
+
   const showSubmitForReview = isEdit && !isAdmin && item &&
     item.status !== "under_review" && item.status !== "completed";
-  const showMarkComplete = isEdit && isAdmin && item?.status === "under_review";
+  const showMarkComplete = isEdit && isAdmin;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -224,10 +231,10 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
               <Label htmlFor="mat-status">Status *</Label>
               <Select value={status} onValueChange={(v) => v && setStatus(v)}>
                 <SelectTrigger id="mat-status">
-                  <SelectValue>{STATUSES.find(s => s.value === status)?.label}</SelectValue>
+                  <SelectValue>{statusOptions.find(s => s.value === status)?.label ?? status}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  {statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
