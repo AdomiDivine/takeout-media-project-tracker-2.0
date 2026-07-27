@@ -2,8 +2,12 @@
 
 import { RadialBarChart, RadialBar, ResponsiveContainer } from "recharts";
 
+type StatusKey = "all" | "completed" | "in_progress" | "pending" | "overdue";
+
 interface ProgressRingProps {
   stats: { total: number; completed: number; in_progress: number; pending: number; overdue: number };
+  activeFilter?: StatusKey;
+  onFilterChange?: (key: StatusKey) => void;
 }
 
 function getMotivation(pct: number) {
@@ -15,14 +19,20 @@ function getMotivation(pct: number) {
   return "All done! 🎉";
 }
 
-export default function ProgressRing({ stats }: ProgressRingProps) {
+export default function ProgressRing({ stats, activeFilter = "all", onFilterChange }: ProgressRingProps) {
   const pct = stats.total === 0 ? 0 : Math.round((stats.completed / stats.total) * 100);
-
   const data = [{ value: pct, fill: "#fd4f05" }];
+
+  const chips: { key: StatusKey; label: string; value: number; color: string; dot: string }[] = [
+    { key: "all",         label: "All Tasks",   value: stats.total,       color: "",                          dot: "bg-foreground/40"      },
+    { key: "completed",   label: "Completed",   value: stats.completed,   color: "text-status-completed",     dot: "bg-status-completed"   },
+    { key: "in_progress", label: "In Progress", value: stats.in_progress, color: "text-status-in-progress",   dot: "bg-status-in-progress" },
+    { key: "pending",     label: "Pending",     value: stats.pending,     color: "text-muted-foreground",     dot: "bg-muted-foreground"   },
+    ...(stats.overdue > 0 ? [{ key: "overdue" as StatusKey, label: "Overdue", value: stats.overdue, color: "text-status-overdue", dot: "bg-status-overdue" }] : []),
+  ];
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-6">
-      {/* Ring */}
       <div className="relative w-28 h-28 flex-shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <RadialBarChart
@@ -40,31 +50,28 @@ export default function ProgressRing({ stats }: ProgressRingProps) {
         </div>
       </div>
 
-      {/* Labels + stats */}
       <div className="flex-1 min-w-0">
         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Overall Progress</p>
         <p className="text-lg font-bold mb-0.5">{getMotivation(pct)}</p>
         <p className="text-xs text-muted-foreground mb-4">You&apos;re doing great. Keep it up!</p>
 
-        <div className="flex gap-4 flex-wrap">
-          <Chip dot="bg-foreground/40"          label="Total Tasks"  value={stats.total}       />
-          <Chip dot="bg-status-completed"       label="Completed"    value={stats.completed}   color="text-status-completed" />
-          <Chip dot="bg-status-in-progress"     label="In Progress"  value={stats.in_progress} color="text-status-in-progress" />
-          <Chip dot="bg-muted-foreground"       label="Pending"      value={stats.pending}     />
-          {stats.overdue > 0 && (
-            <Chip dot="bg-status-overdue" label="Overdue" value={stats.overdue} color="text-status-overdue" />
-          )}
+        <div className="flex gap-3 flex-wrap">
+          {chips.map(({ key, label, value, color, dot }) => (
+            <button
+              key={key}
+              onClick={() => onFilterChange?.(key)}
+              className={`flex flex-col items-center px-2 py-1 rounded-lg transition-colors ${
+                activeFilter === key
+                  ? "bg-brand/10 ring-1 ring-brand/30"
+                  : "hover:bg-muted/60"
+              }`}
+            >
+              <p className={`text-lg font-bold leading-none ${color}`}>{value}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">{label}</p>
+            </button>
+          ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Chip({ label, value, color }: { dot?: string; label: string; value: number; color?: string }) {
-  return (
-    <div className="flex flex-col items-center">
-      <p className={`text-lg font-bold leading-none ${color ?? ""}`}>{value}</p>
-      <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
 }

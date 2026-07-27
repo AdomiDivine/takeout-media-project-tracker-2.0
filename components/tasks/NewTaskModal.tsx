@@ -27,6 +27,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [startDate, setStartDate] = useState(todayStr());
   const [deadline, setDeadline] = useState(todayStr());
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [blocker, setBlocker] = useState("");
@@ -67,7 +68,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
   }, [name, projects, defaultProjectId]);
 
   function reset() {
-    setName(""); setDescription(""); setProjectId(""); setDeadline(todayStr()); setPriority("medium");
+    setName(""); setDescription(""); setProjectId(""); setStartDate(todayStr()); setDeadline(todayStr()); setPriority("medium");
     setBlocker(""); setAttachmentUrl(""); setAssignedMembers([]); setError("");
     setUserRole("");
   }
@@ -85,7 +86,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
       name,
       description: description || null,
       project_id: projectId,
-      start_date: todayStr(),
+      start_date: startDate,
       deadline,
       priority,
       blocker: blocker || null,
@@ -127,10 +128,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="task-name">Task name *</Label>
-              <span className="text-[11px] text-muted-foreground">Started: {format(new Date(), "MMM d, yyyy")}</span>
-            </div>
+            <Label htmlFor="task-name">Task name *</Label>
             <Input id="task-name" placeholder="What needs to be done?" value={name} onChange={e => setName(e.target.value)} required />
             {suggestedProjects.length > 0 && !projectId && (
               <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
@@ -182,10 +180,16 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="deadline">Due date *</Label>
-              <Input id="deadline" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} required />
+              <Label htmlFor="start-date">Start date *</Label>
+              <Input id="start-date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="deadline">Due date *</Label>
+              <Input id="deadline" type="date" value={deadline} min={startDate} onChange={e => setDeadline(e.target.value)} required />
+            </div>
+          </div>
+
+          <div className="space-y-2">
               <Label htmlFor="priority">Priority *</Label>
               <Select value={priority} onValueChange={(v) => setPriority((v ?? "medium") as TaskPriority)}>
                 <SelectTrigger id="priority">
@@ -197,7 +201,6 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
                   <SelectItem value="low">Low</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
           </div>
 
           <div className="space-y-2">
