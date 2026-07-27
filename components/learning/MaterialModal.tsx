@@ -32,6 +32,13 @@ const STATUSES = [
   { value: "completed",    label: "Completed" },
 ];
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const currentMonthName = MONTHS[new Date().getMonth()];
+
 interface MaterialModalProps {
   open: boolean;
   quarter: string;
@@ -46,38 +53,38 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
   const isEdit = !!item;
 
   // Core fields
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState("course");
-  const [cadre, setCadre] = useState("personal_cognitive");
+  const [title, setTitle]   = useState("");
+  const [type, setType]     = useState("course");
+  const [cadre, setCadre]   = useState("personal_cognitive");
   const [status, setStatus] = useState("not_started");
-  const [url, setUrl] = useState("");
-  const [notes, setNotes] = useState("");
+  const [month, setMonth]   = useState(currentMonthName);
+  const [url, setUrl]       = useState("");
 
-  // Member review fields
-  const [keyLearning, setKeyLearning] = useState("");
+  // Member review fields (required for members)
+  const [keyLearning, setKeyLearning]                 = useState("");
   const [applicationEvidence, setApplicationEvidence] = useState("");
-  const [completionDate, setCompletionDate] = useState("");
+  const [completionDate, setCompletionDate]           = useState("");
+
+  // Notes — optional, shown below review fields
+  const [notes, setNotes] = useState("");
 
   // Admin-only fields
   const [observableImpact, setObservableImpact] = useState("");
-  const [comment, setComment] = useState("");
+  const [comment, setComment]                   = useState("");
   const [followUpRequired, setFollowUpRequired] = useState(false);
-  const [opsNotes, setOpsNotes] = useState("");
+  const [opsNotes, setOpsNotes]                 = useState("");
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]     = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [completing, setCompleting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError]         = useState("");
 
   useEffect(() => {
     if (!open) return;
     if (item) {
-      setTitle(item.title);
-      setType(item.type);
-      setCadre(item.cadre);
-      setStatus(item.status);
-      setUrl(item.url ?? "");
-      setNotes(item.notes ?? "");
+      setTitle(item.title); setType(item.type); setCadre(item.cadre);
+      setStatus(item.status); setMonth(item.month ?? currentMonthName);
+      setUrl(item.url ?? ""); setNotes(item.notes ?? "");
       setKeyLearning(item.key_learning ?? "");
       setApplicationEvidence(item.application_evidence ?? "");
       setCompletionDate(item.completion_date ?? "");
@@ -86,25 +93,28 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
       setFollowUpRequired(item.follow_up_required ?? false);
       setOpsNotes(item.ops_notes ?? "");
     } else {
-      setTitle("");
-      setType("course");
-      setCadre("personal_cognitive");
-      setStatus("not_started");
-      setUrl("");
-      setNotes("");
-      setKeyLearning("");
-      setApplicationEvidence("");
-      setCompletionDate("");
-      setObservableImpact("");
-      setComment("");
-      setFollowUpRequired(false);
-      setOpsNotes("");
+      setTitle(""); setType("course"); setCadre("personal_cognitive");
+      setStatus("not_started"); setMonth(currentMonthName);
+      setUrl(""); setNotes("");
+      setKeyLearning(""); setApplicationEvidence(""); setCompletionDate("");
+      setObservableImpact(""); setComment(""); setFollowUpRequired(false); setOpsNotes("");
     }
     setError("");
   }, [open, item]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Members must fill in Key Learning and Application Evidence when editing
+    if (isEdit && !isAdmin) {
+      if (!keyLearning.trim()) {
+        setError("Key Learning is required."); return;
+      }
+      if (!applicationEvidence.trim()) {
+        setError("Application Evidence is required."); return;
+      }
+    }
+
     setError(""); setLoading(true);
 
     const supabase = createClient();
@@ -112,10 +122,7 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
     if (!user) return;
 
     const payload: Record<string, unknown> = {
-      title,
-      type,
-      cadre,
-      status,
+      title, type, cadre, status, month,
       url: url || null,
       notes: notes || null,
       key_learning: keyLearning || null,
@@ -124,14 +131,13 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
     };
 
     if (isAdmin) {
-      payload.observable_impact = observableImpact || null;
-      payload.comment = comment || null;
+      payload.observable_impact  = observableImpact || null;
+      payload.comment            = comment || null;
       payload.follow_up_required = followUpRequired;
-      payload.ops_notes = opsNotes || null;
+      payload.ops_notes          = opsNotes || null;
     }
 
     let err;
-
     if (isEdit && item) {
       const { error: e } = await supabase.from("learning_materials").update(payload).eq("id", item.id);
       err = e;
@@ -149,66 +155,43 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
 
   async function handleSubmitForReview() {
     if (!keyLearning.trim()) {
-      setError("Please fill in Key Learning before submitting.");
-      return;
+      setError("Key Learning is required before submitting for review."); return;
+    }
+    if (!applicationEvidence.trim()) {
+      setError("Application Evidence is required before submitting for review."); return;
     }
     setError(""); setSubmitting(true);
-
     try {
       const res = await fetch("/api/learning/submit-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          materialId: item!.id,
-          keyLearning,
-          applicationEvidence,
-          completionDate,
-        }),
+        body: JSON.stringify({ materialId: item!.id, keyLearning, applicationEvidence, completionDate }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to submit for review."); return; }
       onSaved();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
+    } catch { setError("Network error. Please try again."); }
+    finally { setSubmitting(false); }
   }
 
   async function handleMarkComplete() {
     setError(""); setCompleting(true);
-
     try {
       const res = await fetch("/api/learning/mark-complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          materialId: item!.id,
-          observableImpact,
-          comment,
-          followUpRequired,
-          opsNotes,
-        }),
+        body: JSON.stringify({ materialId: item!.id, observableImpact, comment, followUpRequired, opsNotes }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to mark complete."); return; }
       onSaved();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setCompleting(false);
-    }
+    } catch { setError("Network error. Please try again."); }
+    finally { setCompleting(false); }
   }
 
-  const showSubmitForReview =
-    !isAdmin &&
-    !!item &&
-    item.status !== "under_review" &&
-    item.status !== "completed";
-
-  const showMarkComplete =
-    isAdmin &&
-    item?.status === "under_review";
+  const showSubmitForReview = isEdit && !isAdmin && item &&
+    item.status !== "under_review" && item.status !== "completed";
+  const showMarkComplete = isEdit && isAdmin && item?.status === "under_review";
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -217,20 +200,15 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
           <DialogTitle>{isEdit ? "Edit Material" : `Add to ${quarter}`}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="mat-title">Title *</Label>
-            <Input
-              id="mat-title"
-              placeholder="e.g. Atomic Habits"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              required
-            />
+            <Input id="mat-title" placeholder="e.g. Atomic Habits" value={title} onChange={e => setTitle(e.target.value)} required />
           </div>
 
-          {/* Type + Status */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Type / Status / Month — 3-column grid */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label htmlFor="mat-type">Type *</Label>
               <Select value={type} onValueChange={(v) => v && setType(v)}>
@@ -250,6 +228,17 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
                 </SelectTrigger>
                 <SelectContent>
                   {STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mat-month">Month *</Label>
+              <Select value={month} onValueChange={(v) => v && setMonth(v)}>
+                <SelectTrigger id="mat-month">
+                  <SelectValue>{month}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -274,20 +263,17 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
             <Input id="mat-url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} />
           </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="mat-notes">Notes <span className="text-muted-foreground">(optional)</span></Label>
-            <Textarea id="mat-notes" placeholder="Key takeaways..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="resize-none" />
-          </div>
-
-          {/* Member review section — shown when editing */}
+          {/* Member review fields — required for members when editing */}
           {isEdit && (
-            <div className="space-y-3">
+            <div className="space-y-3 pt-2 border-t border-border">
               <div className="space-y-2">
-                <Label htmlFor="mat-key-learning">Key Learning (Summary) <span className="text-muted-foreground">(optional)</span></Label>
+                <Label htmlFor="mat-key-learning">
+                  Key Learning (Summary)
+                  {!isAdmin && <span className="text-status-overdue ml-1">*</span>}
+                </Label>
                 <Textarea
                   id="mat-key-learning"
-                  placeholder="What did you learn? Key takeaways…"
+                  placeholder="What did you learn? Key takeaways and insights…"
                   value={keyLearning}
                   onChange={e => setKeyLearning(e.target.value)}
                   rows={3}
@@ -295,10 +281,13 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mat-application-evidence">Application Evidence <span className="text-muted-foreground">(optional)</span></Label>
+                <Label htmlFor="mat-application-evidence">
+                  Application Evidence
+                  {!isAdmin && <span className="text-status-overdue ml-1">*</span>}
+                </Label>
                 <Textarea
                   id="mat-application-evidence"
-                  placeholder="How have you applied or plan to apply this?"
+                  placeholder="How have you applied or plan to apply this learning?"
                   value={applicationEvidence}
                   onChange={e => setApplicationEvidence(e.target.value)}
                   rows={3}
@@ -307,15 +296,16 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mat-completion-date">Completion Date <span className="text-muted-foreground">(optional)</span></Label>
-                <Input
-                  id="mat-completion-date"
-                  type="date"
-                  value={completionDate}
-                  onChange={e => setCompletionDate(e.target.value)}
-                />
+                <Input id="mat-completion-date" type="date" value={completionDate} onChange={e => setCompletionDate(e.target.value)} />
               </div>
             </div>
           )}
+
+          {/* Notes — optional, always visible */}
+          <div className="space-y-2">
+            <Label htmlFor="mat-notes">Notes <span className="text-muted-foreground">(optional)</span></Label>
+            <Textarea id="mat-notes" placeholder="Any other notes…" value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="resize-none" />
+          </div>
 
           {/* Admin-only section */}
           {isAdmin && isEdit && (
@@ -323,23 +313,11 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ops Review</p>
               <div className="space-y-2">
                 <Label htmlFor="mat-observable-impact">Observable Impact</Label>
-                <Textarea
-                  id="mat-observable-impact"
-                  placeholder="Observed impact on work or team…"
-                  value={observableImpact}
-                  onChange={e => setObservableImpact(e.target.value)}
-                  rows={3}
-                  className="resize-none"
-                />
+                <Textarea id="mat-observable-impact" placeholder="Observed impact on work or team…" value={observableImpact} onChange={e => setObservableImpact(e.target.value)} rows={3} className="resize-none" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mat-comment">Comment</Label>
-                <Input
-                  id="mat-comment"
-                  placeholder="Admin comment…"
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
-                />
+                <Input id="mat-comment" placeholder="Admin comment…" value={comment} onChange={e => setComment(e.target.value)} />
               </div>
               <div className="flex items-center gap-3">
                 <Label htmlFor="mat-follow-up" className="cursor-pointer select-none">Follow-Up Required</Label>
@@ -349,23 +327,14 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
                   role="switch"
                   aria-checked={followUpRequired}
                   onClick={() => setFollowUpRequired(v => !v)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${followUpRequired ? "bg-brand" : "bg-muted-foreground/30"}`}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none ${followUpRequired ? "bg-brand" : "bg-muted-foreground/30"}`}
                 >
-                  <span
-                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${followUpRequired ? "translate-x-4" : "translate-x-0.5"}`}
-                  />
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${followUpRequired ? "translate-x-4" : "translate-x-0.5"}`} />
                 </button>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mat-ops-notes">Ops Notes</Label>
-                <Textarea
-                  id="mat-ops-notes"
-                  placeholder="Internal ops notes…"
-                  value={opsNotes}
-                  onChange={e => setOpsNotes(e.target.value)}
-                  rows={2}
-                  className="resize-none"
-                />
+                <Textarea id="mat-ops-notes" placeholder="Internal ops notes…" value={opsNotes} onChange={e => setOpsNotes(e.target.value)} rows={2} className="resize-none" />
               </div>
             </div>
           )}
@@ -378,22 +347,12 @@ export default function MaterialModal({ open, quarter, year, item, isAdmin, onCl
               {loading ? "Saving…" : isEdit ? "Save changes" : "Add item"}
             </Button>
             {showSubmitForReview && (
-              <Button
-                type="button"
-                className="w-full bg-amber-500 hover:bg-amber-500/90 text-white"
-                disabled={submitting}
-                onClick={handleSubmitForReview}
-              >
+              <Button type="button" className="w-full bg-amber-500 hover:bg-amber-500/90 text-white" disabled={submitting} onClick={handleSubmitForReview}>
                 {submitting ? "Submitting…" : "Submit for Review"}
               </Button>
             )}
             {showMarkComplete && (
-              <Button
-                type="button"
-                className="w-full bg-status-completed hover:bg-status-completed/90 text-white"
-                disabled={completing}
-                onClick={handleMarkComplete}
-              >
+              <Button type="button" className="w-full bg-status-completed hover:bg-status-completed/90 text-white" disabled={completing} onClick={handleMarkComplete}>
                 {completing ? "Marking…" : "Mark Complete"}
               </Button>
             )}

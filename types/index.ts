@@ -104,6 +104,7 @@ export interface LearningMaterial {
   status: LearningMaterialStatus;
   quarter: "Q1" | "Q2" | "Q3" | "Q4";
   year: number;
+  month: string | null;
   url: string | null;
   notes: string | null;
   created_at: string;
