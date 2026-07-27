@@ -21,9 +21,10 @@ const QUARTERS = [
 ];
 
 const FILTERS = [
-  { value: "not_started", label: "Not Started" },
-  { value: "started",     label: "Started" },
-  { value: "completed",   label: "Completed" },
+  { value: "not_started",  label: "Not Started" },
+  { value: "started",      label: "Started" },
+  { value: "under_review", label: "Under Review" },
+  { value: "completed",    label: "Completed" },
 ];
 
 const TYPE_ICONS: Record<string, ElementType> = {
@@ -49,15 +50,17 @@ const CADRE_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  not_started: "bg-muted text-muted-foreground border-border",
-  started:     "bg-status-in-progress/10 text-status-in-progress border-status-in-progress/30",
-  completed:   "bg-status-completed/10 text-status-completed border-status-completed/30",
+  not_started:  "bg-muted text-muted-foreground border-border",
+  started:      "bg-status-in-progress/10 text-status-in-progress border-status-in-progress/30",
+  under_review: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+  completed:    "bg-status-completed/10 text-status-completed border-status-completed/30",
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  not_started: "Not Started",
-  started:     "Started",
-  completed:   "Completed",
+  not_started:  "Not Started",
+  started:      "Started",
+  under_review: "Under Review",
+  completed:    "Completed",
 };
 
 /* ── export ──────────────────────────────────────────── */
@@ -285,9 +288,10 @@ export default function LearningPage() {
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "w-2 h-2 rounded-full flex-shrink-0",
-                        f.value === "not_started" && "bg-muted-foreground",
-                        f.value === "started"     && "bg-status-in-progress",
-                        f.value === "completed"   && "bg-status-completed",
+                        f.value === "not_started"  && "bg-muted-foreground",
+                        f.value === "started"      && "bg-status-in-progress",
+                        f.value === "under_review" && "bg-amber-500",
+                        f.value === "completed"    && "bg-status-completed",
                       )} />
                       <span className={filter === f.value ? "text-brand font-medium" : ""}>{f.label}</span>
                     </div>
@@ -371,6 +375,22 @@ export default function LearningPage() {
                         <Badge variant="outline" className={cn("text-[10px]", STATUS_STYLES[mat.status])}>
                           {STATUS_LABELS[mat.status]}
                         </Badge>
+                        {!isAdmin && mat.user_id === currentUserId && (mat.status === "not_started" || mat.status === "started") && (
+                          <button
+                            onClick={() => setModal({ open: true, quarter: key, item: mat })}
+                            className="px-2 py-1 rounded text-[10px] bg-brand/10 text-brand hover:bg-brand/20 transition-colors font-medium whitespace-nowrap"
+                          >
+                            Finish
+                          </button>
+                        )}
+                        {isAdmin && mat.status === "under_review" && (
+                          <button
+                            onClick={() => setModal({ open: true, quarter: key, item: mat })}
+                            className="px-2 py-1 rounded text-[10px] bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors font-medium whitespace-nowrap"
+                          >
+                            Review
+                          </button>
+                        )}
                         <button
                           onClick={() => setModal({ open: true, quarter: key, item: mat })}
                           className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -519,6 +539,22 @@ export default function LearningPage() {
                                   )}
                                   <td className="px-3 py-3">
                                     <div className="flex items-center gap-1">
+                                      {!isAdmin && mat.user_id === currentUserId && (mat.status === "not_started" || mat.status === "started") && (
+                                        <button
+                                          onClick={() => setModal({ open: true, quarter: key, item: mat })}
+                                          className="px-2 py-1 rounded text-[10px] bg-brand/10 text-brand hover:bg-brand/20 transition-colors font-medium whitespace-nowrap"
+                                        >
+                                          Finish
+                                        </button>
+                                      )}
+                                      {isAdmin && mat.status === "under_review" && (
+                                        <button
+                                          onClick={() => setModal({ open: true, quarter: key, item: mat })}
+                                          className="px-2 py-1 rounded text-[10px] bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors font-medium whitespace-nowrap"
+                                        >
+                                          Review
+                                        </button>
+                                      )}
                                       {(!isAdmin || mat.user_id === currentUserId) && (
                                         <>
                                           <button
@@ -566,6 +602,7 @@ export default function LearningPage() {
         quarter={modal.quarter}
         year={YEAR}
         item={modal.item}
+        isAdmin={isAdmin}
         onClose={() => setModal({ open: false, quarter: "Q1", item: null })}
         onSaved={() => { setModal({ open: false, quarter: "Q1", item: null }); fetchData(); }}
       />

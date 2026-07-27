@@ -5,14 +5,15 @@ export type TaskPriority = "high" | "medium" | "low";
 export type LearningType = "book" | "course" | "video" | "podcast" | "article" | "other";
 export type LearningStatus = "not_started" | "in_progress" | "completed";
 export type LearningCadre = "personal_cognitive" | "industry_context" | "technical_mastery";
-export type LearningMaterialStatus = "not_started" | "started" | "completed";
+export type LearningMaterialStatus = "not_started" | "started" | "under_review" | "completed";
 export type NotificationType =
   | "assignment"
   | "collaboration"
   | "deadline"
   | "overdue"
   | "blocker"
-  | "completion";
+  | "completion"
+  | "learning_review";
 
 export interface User {
   id: string;
@@ -106,6 +107,13 @@ export interface LearningMaterial {
   url: string | null;
   notes: string | null;
   created_at: string;
+  completion_date: string | null;
+  key_learning: string | null;
+  application_evidence: string | null;
+  observable_impact: string | null;
+  comment: string | null;
+  follow_up_required: boolean;
+  ops_notes: string | null;
 }
 
 export interface Notification {
