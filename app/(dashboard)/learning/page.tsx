@@ -65,21 +65,44 @@ const STATUS_LABELS: Record<string, string> = {
 
 /* ── export ──────────────────────────────────────────── */
 
-function exportCSV(materials: (LearningMaterial & { userName?: string })[], filename: string, includePersonColumn = false) {
-  const sorted = [...materials].sort((a, b) => a.quarter.localeCompare(b.quarter));
-  const headers = includePersonColumn
-    ? ["Person", "Quarter", "Title", "Type", "Cadre", "Status", "URL", "Notes"]
-    : ["Quarter", "Title", "Type", "Cadre", "Status", "URL", "Notes"];
+function exportCSV(materials: (LearningMaterial & { userName?: string })[], filename: string, includePersonColumn = false, adminExport = false) {
+  const sorted = [...materials].sort((a, b) => a.quarter.localeCompare(b.quarter) || (a.month ?? "").localeCompare(b.month ?? ""));
+
+  const baseHeaders = ["Quarter", "Month", "Title", "Type", "Cadre", "Status", "Completion Date", "Key Learning", "Application Evidence", "URL", "Notes"];
+  const adminHeaders = ["Observable Impact", "Comment", "Follow-Up Required", "Ops Notes"];
+  const headers = [
+    ...(includePersonColumn ? ["Person"] : []),
+    ...baseHeaders,
+    ...(adminExport ? adminHeaders : []),
+  ];
+
   const rows = sorted.map(m => {
     const base = [
-      m.quarter, m.title,
+      m.quarter,
+      m.month ?? "",
+      m.title,
       TYPE_LABELS[m.type] ?? m.type,
       CADRE_LABELS[m.cadre] ?? m.cadre,
       STATUS_LABELS[m.status] ?? m.status,
-      m.url ?? "", m.notes ?? "",
+      m.completion_date ?? "",
+      m.key_learning ?? "",
+      m.application_evidence ?? "",
+      m.url ?? "",
+      m.notes ?? "",
     ];
-    return includePersonColumn ? [m.userName ?? "", ...base] : base;
+    const adminFields = adminExport ? [
+      m.observable_impact ?? "",
+      m.comment ?? "",
+      m.follow_up_required ? "Yes" : "No",
+      m.ops_notes ?? "",
+    ] : [];
+    return [
+      ...(includePersonColumn ? [m.userName ?? ""] : []),
+      ...base,
+      ...adminFields,
+    ];
   });
+
   const csv = [headers, ...rows]
     .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     .join("\n");
@@ -311,7 +334,7 @@ export default function LearningPage() {
               const filename = selectedUserName
                 ? `learning-path-${selectedUserName.replace(/\s+/g, "-")}-${YEAR}.csv`
                 : `learning-path-all-${YEAR}.csv`;
-              exportCSV(materials, filename, isAdmin && !selectedUserId);
+              exportCSV(materials, filename, isAdmin && !selectedUserId, isAdmin);
             }}
             disabled={materials.length === 0}
           >
@@ -356,11 +379,23 @@ export default function LearningPage() {
                           <p className="font-medium text-sm leading-tight">{mat.title}</p>
                           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                             <span className="text-[10px] text-muted-foreground">{TYPE_LABELS[mat.type]}</span>
+                            {mat.month && (
+                              <>
+                                <span className="text-muted-foreground/40 text-[10px]">·</span>
+                                <span className="text-[10px] text-muted-foreground">{mat.month}</span>
+                              </>
+                            )}
                             <span className="text-muted-foreground/40 text-[10px]">·</span>
                             <Badge variant="outline" className={cn("text-[10px]", CADRE_STYLES[mat.cadre])}>
                               {CADRE_LABELS[mat.cadre]}
                             </Badge>
                           </div>
+                          {mat.key_learning && (
+                            <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 italic">{mat.key_learning}</p>
+                          )}
+                          {isAdmin && mat.observable_impact && (
+                            <p className="text-[11px] text-cyan-500 mt-0.5 line-clamp-1">Impact: {mat.observable_impact}</p>
+                          )}
                           {mat.url && (
                             <a href={mat.url} target="_blank" rel="noopener noreferrer"
                               className="text-[10px] text-brand hover:underline flex items-center gap-1 mt-1">
@@ -492,7 +527,8 @@ export default function LearningPage() {
                             <tr className="border-b border-border">
                               <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-5 py-2.5">Material</th>
                               <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5 hidden sm:table-cell">Type</th>
-                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Cadre</th>
+                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5 hidden md:table-cell">Cadre</th>
+                              <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5 hidden md:table-cell">Month</th>
                               <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Status</th>
                               {isAdmin && !selectedUserId && (
                                 <th className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">Person</th>
@@ -506,10 +542,16 @@ export default function LearningPage() {
                               return (
                                 <tr key={mat.id} className="border-b border-border/40 last:border-0 hover:bg-muted/10 transition-colors">
                                   <td className="px-5 py-3">
-                                    <div className="flex items-center gap-2">
-                                      <TypeIcon size={13} className="text-muted-foreground flex-shrink-0" />
-                                      <div>
+                                    <div className="flex items-start gap-2">
+                                      <TypeIcon size={13} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+                                      <div className="min-w-0">
                                         <p className="text-sm font-medium leading-tight">{mat.title}</p>
+                                        {mat.key_learning && (
+                                          <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1 italic">{mat.key_learning}</p>
+                                        )}
+                                        {isAdmin && mat.observable_impact && (
+                                          <p className="text-[10px] text-cyan-500 mt-0.5 line-clamp-1">Impact: {mat.observable_impact}</p>
+                                        )}
                                         {mat.url && (
                                           <a href={mat.url} target="_blank" rel="noopener noreferrer"
                                             className="text-[10px] text-brand hover:underline flex items-center gap-1 mt-0.5">
@@ -522,10 +564,13 @@ export default function LearningPage() {
                                   <td className="px-3 py-3 hidden sm:table-cell">
                                     <span className="text-xs text-muted-foreground">{TYPE_LABELS[mat.type]}</span>
                                   </td>
-                                  <td className="px-3 py-3">
+                                  <td className="px-3 py-3 hidden md:table-cell">
                                     <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", CADRE_STYLES[mat.cadre])}>
                                       {CADRE_LABELS[mat.cadre]}
                                     </Badge>
+                                  </td>
+                                  <td className="px-3 py-3 hidden md:table-cell">
+                                    <span className="text-xs text-muted-foreground">{mat.month ?? "—"}</span>
                                   </td>
                                   <td className="px-3 py-3">
                                     <Badge variant="outline" className={cn("text-[10px]", STATUS_STYLES[mat.status])}>
