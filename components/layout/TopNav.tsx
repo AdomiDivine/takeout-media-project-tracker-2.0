@@ -170,30 +170,23 @@ export default function TopNav({ user }: TopNavProps) {
               </div>
 
               {/* Photo options */}
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  setTimeout(() => fileInputRef.current?.click(), 100);
-                }}
-                className="gap-2 cursor-pointer"
-              >
-                <Camera size={14} />
-                Change photo
+              <DropdownMenuItem asChild>
+                <label htmlFor="topnav-avatar-input" className="flex items-center gap-2 cursor-pointer w-full px-2 py-1.5 text-sm rounded-sm hover:bg-accent">
+                  <Camera size={14} />
+                  Change photo
+                </label>
               </DropdownMenuItem>
               {avatarUrl && (
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setTimeout(() => handleEditCurrent(), 100);
-                  }}
-                  className="gap-2 cursor-pointer"
-                >
+                <DropdownMenuItem onClick={handleEditCurrent} className="gap-2 cursor-pointer">
                   <Pencil size={14} />
                   Edit / crop photo
                 </DropdownMenuItem>
               )}
 
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
+                Edit profile
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
                 Settings
               </DropdownMenuItem>
@@ -205,8 +198,9 @@ export default function TopNav({ user }: TopNavProps) {
         </div>
       </header>
 
-      {/* Hidden file input */}
+      {/* Hidden file input — id must match the label's htmlFor above */}
       <input
+        id="topnav-avatar-input"
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
