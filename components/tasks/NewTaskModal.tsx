@@ -181,7 +181,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="start-date">Start date *</Label>
-              <Input id="start-date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+              <Input id="start-date" type="date" value={startDate} min={todayStr()} onChange={e => setStartDate(e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="deadline">Due date *</Label>
