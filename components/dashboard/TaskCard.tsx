@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, MoreVertical, GripVertical } from "lucide-react";
+import { Calendar, MoreVertical, User, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useDraggable } from "@dnd-kit/core";
@@ -28,9 +28,10 @@ const priorityStyles = {
 
 const priorityLabels = { high: "High", medium: "Medium", low: "Low" };
 
-export default function TaskCard({ task, currentUserId, isAdmin, onEdit, onDelete, onMarkDone, onStatusChange }: TaskCardProps) {
+export default function TaskCard({ task, currentUserId, isAdmin, onEdit, onDelete, onMarkDone, onStatusChange, onProgressChange }: TaskCardProps) {
   const isOverdue = task.status === "overdue";
-  const canDelete  = isAdmin || task.created_by === currentUserId;
+  const canDelete = isAdmin || task.created_by === currentUserId;
+  const showProgress = task.status === "in_progress" || task.status === "overdue";
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
@@ -40,50 +41,42 @@ export default function TaskCard({ task, currentUserId, isAdmin, onEdit, onDelet
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.4 : 1,
-    zIndex:  isDragging ? 50 : undefined,
+    zIndex: isDragging ? 50 : undefined,
   };
+
+  function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    onProgressChange?.(task, Math.max(0, Math.min(100, pct)));
+  }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      onClick={() => onEdit?.(task)}
       className={cn(
-        "bg-card border rounded-lg px-4 py-3 flex items-center gap-3 transition-colors cursor-pointer",
+        "bg-card border rounded-lg p-4 space-y-3 transition-colors",
         isOverdue ? "border-status-overdue/50" : "border-border",
-        isDragging ? "shadow-lg" : "hover:bg-muted/30 hover:border-border/80"
+        isDragging ? "shadow-lg" : "hover:border-border/80"
       )}
     >
-      {/* Drag handle — stops click from opening modal */}
-      <button
-        {...listeners}
-        {...attributes}
-        onClick={e => e.stopPropagation()}
-        className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 outline-none"
-        tabIndex={-1}
-      >
-        <GripVertical size={14} />
-      </button>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        {/* Drag handle */}
+        <button
+          {...listeners}
+          {...attributes}
+          className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 mt-0.5 outline-none"
+          tabIndex={-1}
+        >
+          <GripVertical size={14} />
+        </button>
 
-      {/* Task name */}
-      <p className="font-medium text-sm leading-tight line-clamp-1 flex-1">{task.name}</p>
+        <p className="font-semibold text-sm leading-tight line-clamp-2 flex-1">{task.name}</p>
 
-      {/* Priority badge */}
-      <Badge variant="outline" className={cn("text-[10px] flex-shrink-0", priorityStyles[task.priority])}>
-        {priorityLabels[task.priority]}
-      </Badge>
-
-      {/* Due date */}
-      <div className={cn("flex items-center gap-1 text-xs flex-shrink-0", isOverdue ? "text-status-overdue font-medium" : "text-muted-foreground")}>
-        <Calendar size={11} />
-        <span>{format(new Date(task.deadline + "T00:00:00"), "MMM d")}</span>
-      </div>
-
-      {/* 3-dot menu — stops click from opening modal */}
-      <div onClick={e => e.stopPropagation()} className="flex-shrink-0">
         <DropdownMenu>
-          <DropdownMenuTrigger className="text-muted-foreground hover:text-foreground outline-none">
-            <MoreVertical size={15} />
+          <DropdownMenuTrigger className="text-muted-foreground hover:text-foreground flex-shrink-0 outline-none">
+            <MoreVertical size={16} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {task.status === "pending" && (
@@ -97,10 +90,14 @@ export default function TaskCard({ task, currentUserId, isAdmin, onEdit, onDelet
               </DropdownMenuItem>
             )}
             {task.status !== "completed" && (
-              <DropdownMenuItem onClick={() => onMarkDone?.(task)}>Mark as Done</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onMarkDone?.(task)}>
+                Mark as Done
+              </DropdownMenuItem>
             )}
             {task.status === "completed" && (
-              <DropdownMenuItem onClick={() => onStatusChange?.(task, "in_progress")}>Reopen Task</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onStatusChange?.(task, "in_progress")}>
+                Reopen Task
+              </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={() => onEdit?.(task)}>Edit</DropdownMenuItem>
             {canDelete && (
@@ -109,6 +106,57 @@ export default function TaskCard({ task, currentUserId, isAdmin, onEdit, onDelet
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Deadline */}
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Calendar size={12} />
+        <span className={cn(isOverdue && "text-status-overdue font-medium")}>
+          {format(new Date(task.deadline + "T00:00:00"), "MMM d, yyyy")}
+        </span>
+      </div>
+
+      {/* Priority badge */}
+      <Badge variant="outline" className={cn("text-xs", priorityStyles[task.priority])}>
+        {priorityLabels[task.priority]}
+      </Badge>
+
+      {/* Assigned members */}
+      {task.members && task.members.length > 0 && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <User size={12} />
+          <span className="truncate">
+            {task.members.map((m: any) => m.user?.name).filter(Boolean).join(", ")}
+          </span>
+        </div>
+      )}
+
+      {/* Blocker */}
+      {task.blocker && (
+        <p className="text-xs text-status-overdue font-medium truncate">
+          ⚠ {task.blocker}
+        </p>
+      )}
+
+      {/* Clickable progress bar */}
+      {showProgress && (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Progress</span>
+            <span>{task.progress}%</span>
+          </div>
+          <div
+            className="h-2 rounded-full bg-muted cursor-pointer group relative overflow-hidden"
+            onClick={handleProgressClick}
+            title="Click to set progress"
+          >
+            <div
+              className="h-full rounded-full bg-brand transition-all pointer-events-none"
+              style={{ width: `${task.progress}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground/60">Click bar to update</p>
+        </div>
+      )}
     </div>
   );
 }
