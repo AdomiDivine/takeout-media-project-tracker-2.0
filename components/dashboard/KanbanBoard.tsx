@@ -76,7 +76,13 @@ export default function KanbanBoard() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const filteredTasks = filter === "all" ? tasks : tasks.filter(t => t.status === filter);
+  const filteredTasks = filter === "all"
+    ? tasks.filter(t => t.status !== "completed")
+    : tasks.filter(t => t.status === filter);
+
+  const visibleColumns = filter === "all"
+    ? columns.filter(c => c.status !== "completed")
+    : columns;
 
   async function handleMarkDone(task: Task) {
     const supabase = createClient();
@@ -242,8 +248,8 @@ export default function KanbanBoard() {
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
-            <div className="grid grid-cols-4 gap-4">
-              {columns.map(({ status, label, color }) => {
+            <div className={cn("grid gap-4", filter === "all" ? "grid-cols-3" : "grid-cols-4")}>
+              {visibleColumns.map(({ status, label, color }) => {
                 const columnTasks = filteredTasks.filter(t => t.status === status);
                 return (
                   <div key={status} className="space-y-3">
