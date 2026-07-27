@@ -68,7 +68,7 @@ export default function AdminDashboardShell({ userName }: { userName: string }) 
           .select("*, project:projects(name)")
           .is("deleted_at", null)
           .order("created_at", { ascending: false }),
-        supabase.from("users").select("*").not("role", "eq", "super_admin").order("name"),
+        supabase.from("users").select("*").eq("role", "member").order("name"),
         supabase.from("activity_log")
           .select("*, user:users(name, avatar_url), task:tasks(name), project:projects(name)")
           .order("created_at", { ascending: false })
