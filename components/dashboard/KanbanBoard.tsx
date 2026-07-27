@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, CheckCircle2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TaskCard from "./TaskCard";
 import NewTaskModal from "@/components/tasks/NewTaskModal";
@@ -241,7 +241,52 @@ export default function KanbanBoard() {
             ))}
           </div>
 
-          {/* Kanban columns with DnD */}
+          {/* Completed list view */}
+          {filter === "completed" ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 rounded-full bg-status-completed" />
+                <span className="text-sm font-medium">Completed</span>
+                <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                  {filteredTasks.length}
+                </span>
+              </div>
+              {loading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="bg-card border border-border rounded-lg h-14 animate-pulse" />
+                  ))}
+                </div>
+              ) : filteredTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No completed tasks yet.</p>
+              ) : (
+                filteredTasks.map(task => (
+                  <div
+                    key={task.id}
+                    onClick={() => setEditTask(task)}
+                    className="flex items-center gap-3 bg-card border border-border rounded-lg px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 size={16} className="text-status-completed flex-shrink-0" />
+                    <span className="flex-1 text-sm font-medium truncate">{task.name}</span>
+                    {task.completed_at && (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                        <Calendar size={11} />
+                        {format(new Date(task.completed_at), "MMM d")}
+                      </span>
+                    )}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                      task.priority === "high" ? "bg-red-500/10 text-red-500 border-red-500/30" :
+                      task.priority === "medium" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/30" :
+                      "bg-green-500/10 text-green-500 border-green-500/30"
+                    }`}>
+                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+          /* Kanban columns with DnD */
           <DndContext
             sensors={sensors}
             onDragStart={handleDragStart}
@@ -308,6 +353,7 @@ export default function KanbanBoard() {
               )}
             </DragOverlay>
           </DndContext>
+          )}
         </>
       )}
 
