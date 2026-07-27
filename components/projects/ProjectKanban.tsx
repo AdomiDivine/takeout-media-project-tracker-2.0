@@ -52,7 +52,7 @@ export default function ProjectKanban({ projectId }: { projectId: string }) {
       if (user) {
         setCurrentUserId(user.id);
         const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-        if (profile) setIsAdmin(["super_admin", "admin", "team_lead"].includes(profile.role));
+        if (profile) setIsAdmin(["super_admin", "admin"].includes(profile.role));
       }
     }
     fetchUser();

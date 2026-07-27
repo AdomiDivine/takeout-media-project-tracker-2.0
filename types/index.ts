@@ -1,4 +1,4 @@
-export type UserRole = "super_admin" | "admin" | "team_lead" | "member";
+export type UserRole = "super_admin" | "admin" | "member";
 export type ProjectStatus = "active" | "on_hold" | "completed";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "overdue";
 export type TaskPriority = "high" | "medium" | "low";

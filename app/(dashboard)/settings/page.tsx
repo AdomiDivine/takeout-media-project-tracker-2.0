@@ -13,14 +13,12 @@ import type { User } from "@/types";
 const roleLabels: Record<string, string> = {
   super_admin: "Super Admin",
   admin:       "Admin",
-  team_lead:   "Team Lead",
   member:      "Member",
 };
 
 const roleBadgeColors: Record<string, string> = {
   super_admin: "bg-brand/20 text-brand border-brand/30",
   admin:       "bg-status-in-progress/20 text-status-in-progress border-status-in-progress/30",
-  team_lead:   "bg-status-completed/20 text-status-completed border-status-completed/30",
   member:      "bg-muted text-muted-foreground border-border",
 };
 
@@ -224,7 +222,6 @@ export default function SettingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="member"      label="Member">Member</SelectItem>
-                      <SelectItem value="team_lead"   label="Team Lead">Team Lead</SelectItem>
                       <SelectItem value="admin"       label="Admin">Admin</SelectItem>
                       <SelectItem value="super_admin" label="Super Admin">Super Admin</SelectItem>
                     </SelectContent>

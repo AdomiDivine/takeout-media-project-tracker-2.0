@@ -94,7 +94,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
     if (res.ok) setComments(await res.json());
   }
 
-  const isAdmin = ["super_admin", "admin", "team_lead"].includes(currentUser?.role ?? "");
+  const isAdmin = ["super_admin", "admin"].includes(currentUser?.role ?? "");
 
   async function handleAddComment() {
     if (!newComment.trim() || !task) return;

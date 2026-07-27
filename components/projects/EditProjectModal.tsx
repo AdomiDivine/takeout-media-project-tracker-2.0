@@ -49,7 +49,7 @@ export default function EditProjectModal({ open, project, onClose, onUpdated }: 
     async function fetchData() {
       const supabase = createClient();
       const [{ data: membersData }, { data: brandsData }] = await Promise.all([
-        supabase.from("users").select("*").in("role", ["team_lead", "admin", "super_admin"]).order("name"),
+        supabase.from("users").select("*").order("name"),
         supabase.from("brands").select("*").order("name"),
       ]);
       if (membersData) setMembers(membersData as User[]);

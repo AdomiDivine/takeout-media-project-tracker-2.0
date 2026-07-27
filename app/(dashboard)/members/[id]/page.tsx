@@ -13,14 +13,12 @@ import type { User, Task } from "@/types";
 const ROLE_STYLES: Record<string, string> = {
   super_admin: "bg-purple-500/10 text-purple-400 border-purple-500/30",
   admin:       "bg-blue-500/10 text-blue-400 border-blue-500/30",
-  team_lead:   "bg-amber-500/10 text-amber-400 border-amber-500/30",
   member:      "bg-muted text-muted-foreground border-border",
 };
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
   admin:       "Admin",
-  team_lead:   "Team Lead",
   member:      "Member",
 };
 

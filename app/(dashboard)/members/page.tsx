@@ -14,7 +14,7 @@ export default function MembersPage() {
     async function fetchData() {
       const supabase = createClient();
       const [{ data: users }, { data: tasks }] = await Promise.all([
-        supabase.from("users").select("*").in("role", ["team_lead", "member"]).order("name"),
+        supabase.from("users").select("*").in("role", ["member"]).order("name"),
         supabase.from("tasks").select("id, created_by, status").is("deleted_at", null),
       ]);
 

@@ -49,7 +49,7 @@ export default function ProjectPage() {
   }, [id]);
 
   const isAdminRole = ["super_admin", "admin"].includes(userRole);
-  const isProjectLead = userRole === "team_lead" && project?.team_lead_id === userId;
+  const isProjectLead = project?.team_lead_id === userId;
   const canManage = isAdminRole || isProjectLead;
 
   async function handleArchive() {
