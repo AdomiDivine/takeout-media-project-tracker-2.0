@@ -20,5 +20,5 @@ export default async function DashboardPage() {
     return <AdminDashboardShell userName={profile?.name ?? "there"} />;
   }
 
-  return <DashboardShell />;
+  return <DashboardShell userName={profile?.name ?? "there"} />;
 }

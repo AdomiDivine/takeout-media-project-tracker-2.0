@@ -13,7 +13,14 @@ import TaskDonutChart from "./TaskDonutChart";
 import QuickActions from "./QuickActions";
 import NewTaskModal from "@/components/tasks/NewTaskModal";
 
-export default function DashboardShell() {
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+export default function DashboardShell({ userName }: { userName: string }) {
   const { stats, upcomingTasks, allTasks, loading } = useTaskStats();
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const router = useRouter();
@@ -22,6 +29,12 @@ export default function DashboardShell() {
     <div className="flex gap-5 h-full">
       {/* Main column */}
       <div className="flex-1 min-w-0 space-y-5">
+        {/* Greeting */}
+        <div>
+          <h1 className="text-xl font-semibold">{getGreeting()}, {userName} 👋</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Here's a look at your tasks for today.</p>
+        </div>
+
         {/* Primary actions */}
         <div className="flex items-center gap-3">
           <Button

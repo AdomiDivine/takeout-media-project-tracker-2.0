@@ -17,11 +17,13 @@ interface SidebarProps {
 const adminNavItems = [
   { label: "Dashboard",     href: "/dashboard",  icon: LayoutDashboard },
   { label: "Members",       href: "/members",    icon: Users },
+  { label: "Brands",        href: "/brands",     icon: Building2 },
   { label: "Projects",      href: "/projects",   icon: FolderOpen },
   { label: "Tasks",         href: "/tasks",      icon: CheckSquare },
   { label: "Learning Path", href: "/learning",   icon: GraduationCap },
   { label: "Reports",       href: "/reports",    icon: BarChart2 },
   { label: "Activity",      href: "/activity",   icon: Bell },
+  { label: "Archive",       href: "/archive",    icon: Archive },
 ];
 
 const userNavItems = [

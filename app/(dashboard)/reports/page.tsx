@@ -3,17 +3,28 @@
 import { useState } from "react";
 import { Download, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useTasks } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
+import { createClient } from "@/lib/supabase/client";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { format, startOfWeek, addDays, isSameDay, subWeeks } from "date-fns";
+import {
+  format, startOfWeek, addDays, isSameDay, subWeeks,
+  startOfMonth, startOfQuarter, startOfYear, isAfter,
+} from "date-fns";
 import { cn } from "@/lib/utils";
 
-type ReportView = "overview" | "weekly";
+type ReportView   = "overview" | "weekly";
+type DateRange    = "all" | "month" | "quarter" | "year";
+
+const DATE_RANGE_LABELS: Record<DateRange, string> = {
+  all:     "All Time",
+  month:   "This Month",
+  quarter: "This Quarter",
+  year:    "This Year",
+};
 
 const STATUS_COLORS: Record<string, string> = {
   completed:   "#22C55E",
@@ -61,15 +72,26 @@ const statusColors: Record<string, string> = {
   completed:   "bg-status-completed/20 text-status-completed border-status-completed/30",
   overdue:     "bg-status-overdue/20 text-status-overdue border-status-overdue/30",
 };
-const statusLabels: Record<string, string> = {
-  pending: "Pending", in_progress: "In Progress", completed: "Completed", overdue: "Overdue",
-};
+
+function getRangeStart(range: DateRange): Date | null {
+  const now = new Date();
+  if (range === "month")   return startOfMonth(now);
+  if (range === "quarter") return startOfQuarter(now);
+  if (range === "year")    return startOfYear(now);
+  return null;
+}
 
 export default function ReportsPage() {
-  const { tasks, loading } = useTasks();
+  const { tasks: allTasks, loading } = useTasks();
   const { projects } = useProjects();
-  const [exporting, setExporting] = useState(false);
-  const [view, setView] = useState<ReportView>("overview");
+  const [exporting, setExporting]   = useState(false);
+  const [view, setView]             = useState<ReportView>("overview");
+  const [dateRange, setDateRange]   = useState<DateRange>("all");
+
+  const rangeStart = getRangeStart(dateRange);
+  const tasks = rangeStart
+    ? allTasks.filter(t => isAfter(new Date(t.created_at), rangeStart))
+    : allTasks;
 
   const total      = tasks.length;
   const completed  = tasks.filter(t => t.status === "completed").length;
@@ -78,7 +100,6 @@ export default function ReportsPage() {
   const pending    = tasks.filter(t => t.status === "pending").length;
   const completion = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // Status pie data
   const statusData = [
     { name: "Completed",   value: completed,  color: STATUS_COLORS.completed },
     { name: "In Progress", value: inProgress, color: STATUS_COLORS.in_progress },
@@ -86,17 +107,15 @@ export default function ReportsPage() {
     { name: "Overdue",     value: overdue,    color: STATUS_COLORS.overdue },
   ].filter(d => d.value > 0);
 
-  // Priority pie data
   const priorityData = [
     { name: "High",   value: tasks.filter(t => t.priority === "high").length,   color: PRIORITY_COLORS.high },
     { name: "Medium", value: tasks.filter(t => t.priority === "medium").length, color: PRIORITY_COLORS.medium },
     { name: "Low",    value: tasks.filter(t => t.priority === "low").length,    color: PRIORITY_COLORS.low },
   ].filter(d => d.value > 0);
 
-  // Tasks per project bar data
   const projectData = projects
     .map(p => ({
-      name: p.name.length > 16 ? p.name.slice(0, 14) + "…" : p.name,
+      name:  p.name.length > 16 ? p.name.slice(0, 14) + "…" : p.name,
       total: tasks.filter(t => t.project_id === p.id).length,
       done:  tasks.filter(t => t.project_id === p.id && t.status === "completed").length,
     }))
@@ -106,22 +125,31 @@ export default function ReportsPage() {
 
   async function handleExport() {
     setExporting(true);
+
+    // Fetch user names to include in export
+    const supabase = createClient();
+    const { data: users } = await supabase.from("users").select("id, name");
+    const userMap = new Map((users ?? []).map(u => [u.id, u.name as string]));
+
     const XLSX = await import("xlsx");
     const rows = tasks.map(t => ({
       "Task Name":    t.name,
+      "Person":       userMap.get(t.created_by) ?? "—",
       "Status":       STATUS_LABELS[t.status] ?? t.status,
       "Priority":     t.priority.charAt(0).toUpperCase() + t.priority.slice(1),
       "Progress":     `${t.progress}%`,
+      "Start Date":   (t as any).start_date ?? "—",
       "Deadline":     t.deadline,
       "Project":      (t as any).project?.name ?? "—",
       "Created":      format(new Date(t.created_at), "MMM d, yyyy"),
       "Completed At": t.completed_at ? format(new Date(t.completed_at), "MMM d, yyyy") : "—",
     }));
 
+    const rangeLabel = dateRange === "all" ? "all-time" : dateRange;
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Tasks");
-    XLSX.writeFile(wb, `tm-work-os-report-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    XLSX.writeFile(wb, `tm-workroom-report-${rangeLabel}-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
     setExporting(false);
   }
 
@@ -141,7 +169,8 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        {/* Left: title + view toggle */}
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold">Reports</h2>
           <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
@@ -155,18 +184,31 @@ export default function ReportsPage() {
             ))}
           </div>
         </div>
-        <Button
-          onClick={handleExport}
-          disabled={exporting || tasks.length === 0}
-          size="sm" variant="outline" className="gap-1.5"
-        >
-          <Download size={15} />
-          {exporting ? "Exporting…" : "Export to Excel"}
-        </Button>
+
+        {/* Right: date range + export */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
+            {(["all", "month", "quarter", "year"] as DateRange[]).map(r => (
+              <button key={r} onClick={() => setDateRange(r)}
+                className={cn("px-2.5 py-1 text-xs rounded-md font-medium transition-colors",
+                  dateRange === r ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}>
+                {DATE_RANGE_LABELS[r]}
+              </button>
+            ))}
+          </div>
+          <Button
+            onClick={handleExport}
+            disabled={exporting || tasks.length === 0}
+            size="sm" variant="outline" className="gap-1.5"
+          >
+            <Download size={15} />
+            {exporting ? "Exporting…" : "Export"}
+          </Button>
+        </div>
       </div>
 
       {view === "overview" && <>
-      {/* Summary stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard label="Total Tasks"    value={total}       sub={`${completion}% complete`} />
         <StatCard label="Completed"      value={completed}   />
@@ -174,9 +216,7 @@ export default function ReportsPage() {
         <StatCard label="Overdue"        value={overdue}     />
       </div>
 
-      {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Status donut */}
         <div className="bg-card border border-border rounded-xl p-5 space-y-3">
           <h3 className="font-medium text-sm">Tasks by Status</h3>
           {statusData.length === 0 ? (
@@ -194,7 +234,6 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* Priority donut */}
         <div className="bg-card border border-border rounded-xl p-5 space-y-3">
           <h3 className="font-medium text-sm">Tasks by Priority</h3>
           {priorityData.length === 0 ? (
@@ -213,7 +252,6 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Tasks per project bar chart */}
       {projectData.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-3">
           <div className="flex items-center gap-2">
@@ -225,8 +263,8 @@ export default function ReportsPage() {
               <XAxis type="number" tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={false} />
               <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.05)" }} />
-              <Bar dataKey="done"  name="Completed"  stackId="a" fill="#22C55E" radius={[0, 0, 0, 0]} barSize={14} />
-              <Bar dataKey="total" name="Total"       stackId="b" fill="#F97316" radius={[0, 4, 4, 0]} barSize={14} />
+              <Bar dataKey="done"  name="Completed" stackId="a" fill="#22C55E" radius={[0, 0, 0, 0]} barSize={14} />
+              <Bar dataKey="total" name="Total"     stackId="b" fill="#F97316" radius={[0, 4, 4, 0]} barSize={14} />
             </BarChart>
           </ResponsiveContainer>
           <p className="text-xs text-muted-foreground">Orange = total tasks · Green = completed</p>
@@ -234,7 +272,6 @@ export default function ReportsPage() {
       )}
       </>}
 
-      {/* ── Weekly view ── */}
       {view === "weekly" && (() => {
         const today = new Date();
         const weeks = Array.from({ length: 8 }, (_, i) => {

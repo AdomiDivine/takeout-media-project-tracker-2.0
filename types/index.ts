@@ -55,6 +55,7 @@ export interface Task {
   description: string | null;
   project_id: string;
   created_by: string;
+  start_date: string | null;
   deadline: string;
   status: TaskStatus;
   priority: TaskPriority;

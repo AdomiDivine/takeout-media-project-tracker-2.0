@@ -85,6 +85,7 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
       name,
       description: description || null,
       project_id: projectId,
+      start_date: todayStr(),
       deadline,
       priority,
       blocker: blocker || null,

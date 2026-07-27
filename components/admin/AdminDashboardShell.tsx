@@ -37,6 +37,13 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
   overdue:     "bg-red-500/10 text-red-400 border-red-500/30",
 };
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function AdminDashboardShell({ userName }: { userName: string }) {
   const [memberCount, setMemberCount] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
@@ -55,13 +62,13 @@ export default function AdminDashboardShell({ userName }: { userName: string }) 
         { data: memberData },
         { data: activityData },
       ] = await Promise.all([
-        supabase.from("users").select("*", { count: "exact", head: true }),
+        supabase.from("users").select("*", { count: "exact", head: true }).not("role", "eq", "super_admin"),
         supabase.from("projects").select("*", { count: "exact", head: true }).eq("status", "active"),
         supabase.from("tasks")
           .select("*, project:projects(name)")
           .is("deleted_at", null)
           .order("created_at", { ascending: false }),
-        supabase.from("users").select("*").order("name"),
+        supabase.from("users").select("*").not("role", "eq", "super_admin").order("name"),
         supabase.from("activity_log")
           .select("*, user:users(name, avatar_url), task:tasks(name), project:projects(name)")
           .order("created_at", { ascending: false })
@@ -143,7 +150,7 @@ export default function AdminDashboardShell({ userName }: { userName: string }) 
       {/* Greeting */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Good morning, {userName} 👋</h1>
+          <h1 className="text-xl font-semibold">{getGreeting()}, {userName} 👋</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Here's an overview of your team's work.</p>
         </div>
         <span className="text-sm text-muted-foreground border border-border rounded-lg px-3 py-1.5">
