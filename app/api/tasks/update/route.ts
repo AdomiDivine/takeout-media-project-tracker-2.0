@@ -27,9 +27,35 @@ export async function PATCH(req: NextRequest) {
     const { taskId, ...fields } = body;
     if (!taskId) return NextResponse.json({ error: "Missing taskId" }, { status: 400 });
 
-    const adminFields  = ["name", "description", "deadline", "priority", "status", "progress", "blocker", "attachment_url", "completed_at"];
+    const { data: task } = await supabase
+      .from("tasks")
+      .select("created_by")
+      .eq("id", taskId)
+      .is("deleted_at", null)
+      .single();
+    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+
+    const isCreator = task.created_by === user.id;
+
+    let isAssignee = false;
+    if (!isAdmin && !isCreator) {
+      const { data: membership } = await supabase
+        .from("task_members")
+        .select("task_id")
+        .eq("task_id", taskId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      isAssignee = !!membership;
+    }
+
+    if (!isAdmin && !isCreator && !isAssignee) {
+      return NextResponse.json({ error: "You don't have permission to edit this task" }, { status: 403 });
+    }
+
+    // Admins and the task's creator can edit everything; assignees can only update progress fields.
+    const fullFields   = ["name", "description", "deadline", "priority", "status", "progress", "blocker", "attachment_url", "completed_at"];
     const memberFields = ["status", "progress", "blocker", "completed_at"];
-    const allowed      = isAdmin ? adminFields : memberFields;
+    const allowed      = isAdmin || isCreator ? fullFields : memberFields;
 
     const updatePayload: Record<string, any> = {};
     for (const key of allowed) {

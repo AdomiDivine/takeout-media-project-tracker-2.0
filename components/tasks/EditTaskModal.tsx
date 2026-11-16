@@ -95,6 +95,8 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
   }
 
   const isAdmin = ["super_admin", "admin"].includes(currentUser?.role ?? "");
+  // Admins and the person who created the task can edit all of its details.
+  const canEditDetails = isAdmin || (!!currentUser && task?.created_by === currentUser.id);
 
   async function handleAddComment() {
     if (!newComment.trim() || !task) return;
@@ -160,7 +162,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
       completed_at: status === "completed" ? new Date().toISOString() : null,
     };
 
-    const body = isAdmin
+    const body = canEditDetails
       ? { ...base, name, description: description || null, deadline, priority, attachment_url: attachmentUrl || null }
       : base;
 
@@ -219,7 +221,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
               {/* Task name */}
               <div className="space-y-2">
                 <Label>Task name</Label>
-                {isAdmin ? (
+                {canEditDetails ? (
                   <Input value={name} onChange={e => setName(e.target.value)} required />
                 ) : (
                   <p className="text-sm font-medium px-3 py-2 bg-muted rounded-md leading-snug">{name}</p>
@@ -229,7 +231,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
               {/* Description */}
               <div className="space-y-2">
                 <Label>Description</Label>
-                {isAdmin ? (
+                {canEditDetails ? (
                   <Textarea
                     placeholder="Describe the task…"
                     value={description}
@@ -258,7 +260,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
                 </div>
                 <div className="space-y-2">
                   <Label>Priority</Label>
-                  {isAdmin ? (
+                  {canEditDetails ? (
                     <Select value={priority} onValueChange={(v) => v && setPriority(v as TaskPriority)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -278,7 +280,7 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
               {/* Deadline */}
               <div className="space-y-2">
                 <Label>Deadline</Label>
-                {isAdmin ? (
+                {canEditDetails ? (
                   <Input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} required />
                 ) : (
                   <p className="text-sm font-medium px-3 py-2 bg-muted rounded-md">
@@ -311,8 +313,8 @@ export default function EditTaskModal({ open, task, onClose, onUpdated }: EditTa
                 />
               </div>
 
-              {/* Attachment — admins only */}
-              {isAdmin && (
+              {/* Attachment — admins and task creator */}
+              {canEditDetails && (
                 <div className="space-y-2">
                   <Label>Attachment link <span className="text-muted-foreground">(optional)</span></Label>
                   <Input type="url" placeholder="Google Drive, Figma, Docs…" value={attachmentUrl} onChange={e => setAttachmentUrl(e.target.value)} />
