@@ -101,11 +101,19 @@ export default function NewTaskModal({ open, defaultStatus = "pending", defaultP
     // Assign selected members via service-role API (bypasses RLS)
     if (assignedMembers.length > 0 && newTask) {
       const taskId = (newTask as any).id;
-      await fetch("/api/tasks/assign", {
+      const assignRes = await fetch("/api/tasks/assign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, userIds: assignedMembers.map(m => m.id) }),
       });
+      if (!assignRes.ok) {
+        // Task was created but assignment failed — don't email people about a task they can't see
+        const data = await assignRes.json().catch(() => ({}));
+        window.alert(`The task was created, but assigning members failed: ${data.error ?? "unknown error"}.\nOpen the task and assign them again.`);
+        reset();
+        onCreated();
+        return;
+      }
       assignedMembers.forEach(m => {
         fetch("/api/email/task-assigned", {
           method: "POST",

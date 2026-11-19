@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useId } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, TaskStats } from "@/types";
 
@@ -9,33 +9,15 @@ export function useTaskStats() {
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const channelName = `stats-realtime-${useId()}`;
 
   const fetch = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: createdTasks } = await supabase
-      .from("tasks")
-      .select("*, project:projects(name)")
-      .is("deleted_at", null)
-      .eq("created_by", user.id);
-
-    const { data: memberTaskIds } = await supabase
-      .from("task_members")
-      .select("task_id")
-      .eq("user_id", user.id);
-
-    const assignedIds = (memberTaskIds ?? []).map((m: { task_id: string }) => m.task_id);
-
-    const { data: assignedTasks } = assignedIds.length > 0
-      ? await supabase.from("tasks").select("*, project:projects(name)").is("deleted_at", null).in("id", assignedIds)
-      : { data: [] };
-
-    // Merge and deduplicate
-    const allTasksMap = new Map<string, Task>();
-    [...(createdTasks ?? []), ...(assignedTasks ?? [])].forEach((t) => allTasksMap.set(t.id, t as Task));
-    const allTasks = Array.from(allTasksMap.values());
+    // Same source as the task board: tasks the user created OR is assigned to.
+    // Querying Supabase directly from the browser silently dropped assigned tasks
+    // because of the projects RLS policy, so this goes through the server API.
+    const res = await window.fetch("/api/tasks/mine");
+    if (!res.ok) { setLoading(false); return; }
+    const allTasks = ((await res.json()) as Task[]).filter(t => !t.deleted_at);
 
     const newStats: TaskStats = {
       total: allTasks.length,
@@ -47,7 +29,7 @@ export function useTaskStats() {
 
     // Next 3 upcoming deadlines (not completed, not overdue, ordered by deadline)
     const upcoming = allTasks
-      .filter(t => t.status !== "completed" && t.status !== "overdue" && t.deleted_at === null)
+      .filter(t => t.status !== "completed" && t.status !== "overdue")
       .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
       .slice(0, 3);
 
@@ -59,13 +41,24 @@ export function useTaskStats() {
 
   useEffect(() => {
     fetch();
+
+    // Refresh when tasks change or when someone is assigned/unassigned
     const supabase = createClient();
     const channel = supabase
-      .channel("stats-realtime")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, fetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "task_members" }, fetch)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetch]);
+
+    // Catch assignments made while the tab was in the background
+    const handleVisibility = () => { if (document.visibilityState === "visible") fetch(); };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [fetch, channelName]);
 
   return { stats, upcomingTasks, allTasks, loading };
 }
