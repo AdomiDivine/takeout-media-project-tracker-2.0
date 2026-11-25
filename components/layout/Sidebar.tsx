@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, FolderOpen, Settings, LogOut, ChevronDown, ChevronRight, Sun, Moon, Building2, GraduationCap, Users, Bell } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, FolderOpen, Settings, LogOut, ChevronDown, ChevronRight, Sun, Moon, Building2, GraduationCap, Users, Bell, ChevronsUpDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { applyTheme, getThemePreference, resolveDark, THEME_EVENT } from "@/lib/theme";
 import type { Brand, Project, User } from "@/types";
+
+const ROLE_LABELS: Record<string, string> = { super_admin: "Super Admin", admin: "Admin", member: "Member" };
 
 interface SidebarProps {
   user: User;
@@ -34,8 +37,6 @@ const userNavItems = [
   { label: "Schedule",      href: "/calendar",   icon: Calendar },
   { label: "Activity",      href: "/activity",   icon: Activity },
   { label: "Learning Path", href: "/learning",   icon: GraduationCap },
-  { label: "Reports",       href: "/reports",    icon: BarChart2 },
-  { label: "Archive",       href: "/archive",    icon: Archive },
 ];
 
 export default function Sidebar({ user, brands, projects }: SidebarProps) {
@@ -44,6 +45,13 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
   const [brandsOpen, setBrandsOpen] = useState(true);
   const [expandedBrand, setExpandedBrand] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState(user.avatar_url);
+
+  useEffect(() => {
+    const onAvatar = (e: Event) => setAvatarUrl((e as CustomEvent<{ url: string }>).detail.url);
+    window.addEventListener("tm-slate:avatar-updated", onAvatar);
+    return () => window.removeEventListener("tm-slate:avatar-updated", onAvatar);
+  }, []);
 
   const isAdmin = user.role === "admin" || user.role === "super_admin";
   const navItems = isAdmin ? adminNavItems : userNavItems;
@@ -211,29 +219,39 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
         </div>}
       </nav>
 
-      {/* Bottom */}
-      <div className="border-t border-border p-2 space-y-0.5">
-        <button
-          onClick={toggleTheme}
-          className="flex items-center gap-2.5 px-2 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors w-full text-left"
-        >
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          {isDark ? "Light Mode" : "Dark Mode"}
-        </button>
-        <Link
-          href="/settings"
-          className="flex items-center gap-2.5 px-2 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-        >
-          <Settings size={16} />
-          Settings
-        </Link>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2.5 px-2 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors w-full text-left"
-        >
-          <LogOut size={16} />
-          Logout
-        </button>
+      {/* Bottom: your profile. Click for Settings, theme and log out */}
+      <div className="border-t border-border p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2.5 w-full px-2 py-2 rounded-md hover:bg-muted transition-colors outline-none text-left">
+            <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                : <span className="text-xs font-semibold text-white">{user.name.charAt(0).toUpperCase()}</span>}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate leading-tight">{user.name}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{user.job_title || ROLE_LABELS[user.role] || user.role}</p>
+            </div>
+            <ChevronsUpDown size={14} className="text-muted-foreground flex-shrink-0" />
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent side="top" align="start" className="w-60">
+            <p className="px-2 pt-1.5 pb-2 text-xs text-muted-foreground truncate">{user.email}</p>
+            <DropdownMenuItem onClick={() => router.push("/settings")} className="gap-2 cursor-pointer">
+              <Settings size={15} />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={toggleTheme} className="gap-2 cursor-pointer">
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+              {isDark ? "Light mode" : "Dark mode"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="gap-2 cursor-pointer">
+              <LogOut size={15} />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );

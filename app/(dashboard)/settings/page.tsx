@@ -8,9 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ImageUpload from "@/components/ui/image-upload";
-import { Bell, KeyRound, Palette, UserCheck, UserRound, UserX, Users } from "lucide-react";
+import { BarChart2, Bell, KeyRound, Palette, UserCheck, UserRound, UserX, Users, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FIELD, SectionTitle, SettingRow } from "@/components/settings/SettingRow";
-import JobTitleField from "@/components/settings/JobTitleField";
+import DeleteAccountSection from "@/components/settings/DeleteAccountSection";
+import ReportsView from "@/components/reports/ReportsView";
+import { PasswordInput, PasswordMatch, PasswordStrength, isPasswordAcceptable, MIN_PASSWORD_LENGTH } from "@/components/ui/password-field";
 import AppearanceSection from "@/components/settings/AppearanceSection";
 import NotificationsSection from "@/components/settings/NotificationsSection";
 import SessionsSection from "@/components/settings/SessionsSection";
@@ -23,8 +26,8 @@ const roleLabels: Record<string, string> = {
   member:      "Member",
 };
 
-type SettingsTab = "profile" | "account" | "appearance" | "notifications" | "members";
-const TAB_KEYS: SettingsTab[] = ["profile", "account", "appearance", "notifications", "members"];
+type SettingsTab = "profile" | "account" | "appearance" | "notifications" | "reports" | "members";
+const TAB_KEYS: SettingsTab[] = ["profile", "account", "appearance", "notifications", "reports", "members"];
 
 // Who can deactivate whom: super admins can deactivate anyone but themselves; admins can deactivate members.
 function canDeactivateUser(viewer: User | null, target: User) {
@@ -41,13 +44,17 @@ function ChangePasswordCard({ email }: { email: string }) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
+  const sameAsCurrent = !!newPassword && newPassword === currentPassword;
+  const canSubmit =
+    !!currentPassword && isPasswordAcceptable(newPassword) && newPassword === confirmPassword && !sameAsCurrent;
+
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setSaved(false);
 
-    if (newPassword.length < 8) { setError("New password must be at least 8 characters."); return; }
+    if (!isPasswordAcceptable(newPassword)) { setError(`New password must be at least ${MIN_PASSWORD_LENGTH} characters.`); return; }
     if (newPassword !== confirmPassword) { setError("New passwords don't match."); return; }
-    if (newPassword === currentPassword) { setError("New password must be different from your current password."); return; }
+    if (sameAsCurrent) { setError("New password must be different from your current password."); return; }
 
     setLoading(true);
     const supabase = createClient();
@@ -71,24 +78,33 @@ function ChangePasswordCard({ email }: { email: string }) {
 
   return (
     <form onSubmit={handleChangePassword}>
-      <SectionTitle>Change password</SectionTitle>
+      <SectionTitle description="Use a strong password you don't use anywhere else.">Change password</SectionTitle>
       <SettingRow label="Current password" htmlFor="current-password">
-        <Input id="current-password" type="password" autoComplete="current-password" className={FIELD}
-          value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required />
+        <div className={FIELD}>
+          <PasswordInput id="current-password" autoComplete="current-password"
+            value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required />
+        </div>
       </SettingRow>
-      <SettingRow label="New password" description="At least 8 characters." htmlFor="new-password">
-        <Input id="new-password" type="password" autoComplete="new-password" minLength={8} className={FIELD}
-          value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+      <SettingRow label="New password" description="At least 8 characters. Mix letters, numbers and symbols to make it strong." htmlFor="new-password">
+        <div className={cn(FIELD, "text-left")}>
+          <PasswordInput id="new-password" autoComplete="new-password"
+            value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+          <PasswordStrength password={newPassword} />
+          {sameAsCurrent && <p className="text-xs text-status-overdue pt-1">Must be different from your current password.</p>}
+        </div>
       </SettingRow>
       <SettingRow label="Confirm new password" htmlFor="confirm-password">
-        <Input id="confirm-password" type="password" autoComplete="new-password" minLength={8} className={FIELD}
-          value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+        <div className={cn(FIELD, "text-left")}>
+          <PasswordInput id="confirm-password" autoComplete="new-password"
+            value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+          <PasswordMatch password={newPassword} confirm={confirmPassword} />
+        </div>
       </SettingRow>
 
       <div className="flex items-center justify-end gap-3 pt-4">
         {error && <p className="text-sm text-status-overdue mr-auto">{error}</p>}
         {saved && <p className="text-sm text-status-completed mr-auto">Password updated.</p>}
-        <Button type="submit" className="bg-brand hover:bg-brand/90 text-white" disabled={loading}>
+        <Button type="submit" className="bg-brand hover:bg-brand/90 text-white" disabled={loading || !canSubmit}>
           {loading ? "Updating…" : "Update password"}
         </Button>
       </div>
@@ -153,7 +169,9 @@ function DeactivateUserDialog({ target, onClose, onDeactivated }: {
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
+  const [showPreferred, setShowPreferred] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -182,6 +200,7 @@ export default function SettingsPage() {
         setName(data.name);
         setJobTitle(data.job_title ?? "");
         setPreferredName(data.preferred_name ?? "");
+        setShowPreferred(!!data.preferred_name);
         setAvatarUrl(data.avatar_url ?? "");
 
         if (["super_admin", "admin"].includes(data.role)) {
@@ -195,7 +214,8 @@ export default function SettingsPage() {
         }
         // Links like /settings?tab=members open straight to that tab
         const requested = new URLSearchParams(window.location.search).get("tab") as SettingsTab | null;
-        if (requested && TAB_KEYS.includes(requested) && (requested !== "members" || ["super_admin", "admin"].includes(data.role))) {
+        const isAdminUser = ["super_admin", "admin"].includes(data.role);
+        if (requested && TAB_KEYS.includes(requested) && (requested === "members" ? isAdminUser : requested === "reports" ? !isAdminUser : true)) {
           setActiveTab(requested);
         }
       }
@@ -274,21 +294,34 @@ export default function SettingsPage() {
     { key: "account", label: "Account", icon: KeyRound },
     { key: "appearance", label: "Appearance", icon: Palette },
     { key: "notifications", label: "Notifications", icon: Bell },
+    // Members download their own report here; admins use the Reports page
+    ...(!canManageMembers ? [{ key: "reports" as const, label: "Reports", icon: BarChart2 }] : []),
     ...(canManageMembers ? [{ key: "members" as const, label: "Team Members", icon: Users }] : []),
   ];
 
   // Team list order: active members, then admins, then super admins; deactivated accounts last
   const roleOrder: Record<string, number> = { member: 0, admin: 1, super_admin: 2 };
-  const sortedUsers = [...allUsers].sort((a, b) =>
+  // Super admins see everyone; admins only see the members they manage
+  const visibleUsers = isSuperAdmin ? allUsers : allUsers.filter(u => u.role === "member");
+  const sortedUsers = [...visibleUsers].sort((a, b) =>
     Number(deactivatedIds.has(a.id)) - Number(deactivatedIds.has(b.id)) ||
     (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9) ||
     a.name.localeCompare(b.name)
   );
-  const activeCount = allUsers.filter(u => !deactivatedIds.has(u.id)).length;
+  const activeCount = visibleUsers.filter(u => !deactivatedIds.has(u.id)).length;
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col md:flex-row md:min-h-[560px]">
+      <div className="relative bg-card border border-border rounded-xl overflow-hidden flex flex-col md:flex-row md:min-h-[560px]">
+        {/* Close: back to the page you came from */}
+        <button
+          type="button"
+          aria-label="Close settings"
+          onClick={() => (window.history.length > 1 ? router.back() : router.push("/dashboard"))}
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <X size={18} />
+        </button>
         {/* Side menu */}
         <nav className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border p-3">
           <h2 className="text-sm font-semibold px-2.5 pb-3 pt-1">Settings</h2>
@@ -329,17 +362,29 @@ export default function SettingsPage() {
                   onUploaded={handleAvatarUploaded}
                 />
               </SettingRow>
-              <SettingRow label="Display name" description="How your name appears to the team." htmlFor="settings-name">
-                <Input id="settings-name" className={FIELD} value={name} onChange={e => setName(e.target.value)} required />
+              <SettingRow label="Display name" description="The name you signed up with. This is how the team sees you." htmlFor="settings-name">
+                <div className={cn(FIELD, "text-left")}>
+                  <Input id="settings-name" value={name} onChange={e => setName(e.target.value)} required />
+                  {user && "preferred_name" in user && (
+                    showPreferred ? (
+                      <div className="mt-3 space-y-1.5">
+                        <Label htmlFor="settings-preferred-name" className="text-xs text-muted-foreground font-normal">What should we call you?</Label>
+                        <Input id="settings-preferred-name" placeholder={name.split(" ")[0]}
+                          value={preferredName} onChange={e => setPreferredName(e.target.value)} />
+                        <p className="text-[11px] text-muted-foreground">Used in greetings and emails.</p>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setShowPreferred(true)}
+                        className="mt-2 text-xs text-brand hover:underline">
+                        + What should we call you?
+                      </button>
+                    )
+                  )}
+                </div>
               </SettingRow>
-              {user && "preferred_name" in user && (
-                <SettingRow label="What should we call you?" description="Used in greetings and emails. Leave blank to use your first name." htmlFor="settings-preferred-name">
-                  <Input id="settings-preferred-name" className={FIELD} placeholder={name.split(" ")[0]}
-                    value={preferredName} onChange={e => setPreferredName(e.target.value)} />
-                </SettingRow>
-              )}
-              <SettingRow label="Job title" description="Optional. Shown on your profile.">
-                <JobTitleField value={jobTitle} onChange={setJobTitle} />
+              <SettingRow label="Role" description="Your job title, shown on your profile." htmlFor="settings-job-title">
+                <Input id="settings-job-title" className={FIELD} placeholder="e.g. Graphic Designer"
+                  value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
               </SettingRow>
 
               <div className="flex items-center justify-end gap-3 pt-4">
@@ -373,8 +418,13 @@ export default function SettingsPage() {
               {user && <ChangePasswordCard email={user.email} />}
 
               <SessionsSection />
+
+              <DeleteAccountSection />
             </div>
           )}
+
+          {/* ── REPORTS (members): download your own report ── */}
+          {activeTab === "reports" && !canManageMembers && <ReportsView title="My report" />}
 
           {/* ── APPEARANCE ── */}
           {activeTab === "appearance" && <AppearanceSection />}
@@ -392,7 +442,7 @@ export default function SettingsPage() {
             <div>
               <SectionTitle action={
                 <span className="text-xs text-muted-foreground">
-                  {activeCount} active{allUsers.length > activeCount && ` · ${allUsers.length - activeCount} deactivated`}
+                  {activeCount} active{visibleUsers.length > activeCount && ` · ${visibleUsers.length - activeCount} deactivated`}
                 </span>
               }>
                 Team Members

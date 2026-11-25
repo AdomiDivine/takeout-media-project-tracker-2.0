@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
 
   if (isAdmin) {
-    return <AdminDashboardShell userName={profile?.preferred_name || profile?.name || "there"} />;
+    return <AdminDashboardShell userName={profile?.preferred_name || profile?.name || "there"} viewerRole={profile?.role ?? "admin"} />;
   }
 
   return <DashboardShell userName={profile?.preferred_name || profile?.name || "there"} />;

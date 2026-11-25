@@ -22,23 +22,11 @@ const STATUS_DOT: Record<string, string> = {
 
 export default function MiniCalendar({ tasks }: Props) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState<Date>(new Date());
   const [view, setView] = useState<"month" | "week">("month");
   const today = new Date();
 
   const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
   const startPadding = getDay(startOfMonth(currentMonth));
-
-  // Map "yyyy-MM-dd" → tasks created that day
-  const createdMap = useMemo(() => {
-    const map = new Map<string, Task[]>();
-    tasks.forEach(t => {
-      const key = format(parseISO(t.created_at), "yyyy-MM-dd");
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(t);
-    });
-    return map;
-  }, [tasks]);
 
   // Map "yyyy-MM-dd" → tasks due that day
   const deadlineMap = useMemo(() => {
@@ -52,10 +40,6 @@ export default function MiniCalendar({ tasks }: Props) {
     });
     return map;
   }, [tasks]);
-
-  const selKey = format(selectedDay, "yyyy-MM-dd");
-  const selCreated = createdMap.get(selKey) ?? [];
-  const selDue = deadlineMap.get(selKey) ?? [];
 
   const weekStart = startOfWeek(today);
   const weekEnd = endOfWeek(today);
@@ -72,16 +56,6 @@ export default function MiniCalendar({ tasks }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [tasks]
   );
-
-  function TaskRow({ task, label }: { task: Task; label?: string }) {
-    return (
-      <div className="flex items-center gap-1.5 py-0.5">
-        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[task.status] ?? "bg-muted-foreground"}`} />
-        <span className="text-xs truncate flex-1">{task.name}</span>
-        {label && <span className="text-[10px] text-muted-foreground flex-shrink-0">{label}</span>}
-      </div>
-    );
-  }
 
   return (
     <div className="bg-card border border-border rounded-xl p-4">
@@ -130,42 +104,30 @@ export default function MiniCalendar({ tasks }: Props) {
             {days.map(day => {
               const isToday = isSameDay(day, today);
               const isCurrentMonth = isSameMonth(day, currentMonth);
-              const isSelected = isSameDay(day, selectedDay);
+              const due = deadlineMap.get(format(day, "yyyy-MM-dd")) ?? [];
 
               return (
-                <button
+                <div
                   key={day.toISOString()}
-                  onClick={() => setSelectedDay(day)}
-                  className={`text-center text-xs rounded-full w-7 h-7 mx-auto flex items-center justify-center transition-colors ${
+                  title={due.length ? `Due: ${due.map(t => t.name).join(", ")}` : undefined}
+                  className={`relative text-center text-xs rounded-full w-7 h-7 mx-auto flex items-center justify-center ${
                     isToday
                       ? "bg-brand text-white font-bold"
-                      : isSelected
-                      ? "ring-1 ring-brand bg-muted text-foreground"
                       : isCurrentMonth
-                      ? "text-foreground hover:bg-muted"
+                      ? "text-foreground"
                       : "text-muted-foreground"
                   }`}
                 >
                   {format(day, "d")}
-                </button>
+                  {/* Dot = something is due this day (details are in Upcoming Deadlines) */}
+                  {due.length > 0 && (
+                    <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${isToday ? "bg-white" : "bg-brand"}`} />
+                  )}
+                </div>
               );
             })}
           </div>
 
-          {/* Day detail */}
-          <div className="mt-3 pt-3 border-t border-border min-h-[40px]">
-            <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">{format(selectedDay, "MMMM d, yyyy")}</p>
-            {selCreated.length === 0 && selDue.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No tasks on this day</p>
-            ) : (
-              <>
-                {/* deduplicate tasks that appear in both lists */}
-                {Array.from(new Map([...selCreated, ...selDue].map(t => [t.id, t])).values()).map(t => (
-                  <TaskRow key={t.id} task={t} label={(t.project as any)?.name} />
-                ))}
-              </>
-            )}
-          </div>
         </>
       )}
 

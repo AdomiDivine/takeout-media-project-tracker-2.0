@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle } from "lucide-react";
+import { AvatarPicker, uploadAvatarForCurrentUser } from "@/components/ui/avatar-picker";
+import { PasswordInput, PasswordMatch, PasswordStrength, isPasswordAcceptable, MIN_PASSWORD_LENGTH } from "@/components/ui/password-field";
 
 // Landing page for the link in an invite email (/accept-invite?token_hash=...).
 // The one-time token is only used when the person submits, so email link
@@ -20,10 +22,15 @@ export default function AcceptInvitePage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const [triedSubmit, setTriedSubmit] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
+    setTriedSubmit(true);
+    if (!photo) { setError("Please add a profile photo."); return; }
+    if (!isPasswordAcceptable(password)) { setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`); return; }
     if (password !== confirm) { setError("Passwords do not match."); return; }
 
     const tokenHash = new URLSearchParams(window.location.search).get("token_hash");
@@ -40,9 +47,13 @@ export default function AcceptInvitePage() {
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const { data: updated, error: updateError } = await supabase.auth.updateUser({ password });
+    if (updateError) { setLoading(false); setError(updateError.message); return; }
+
+    // Save their role and photo on the profile
+    if (updated.user) await supabase.from("users").update({ job_title: jobTitle.trim() }).eq("id", updated.user.id);
+    try { await uploadAvatarForCurrentUser(photo); } catch { /* they can add it later in Settings */ }
     setLoading(false);
-    if (updateError) { setError(updateError.message); return; }
 
     setDone(true);
     setTimeout(() => router.push("/dashboard"), 2000);
@@ -68,21 +79,32 @@ export default function AcceptInvitePage() {
     <Card className="border-border bg-card">
       <CardHeader>
         <CardTitle className="text-xl">Welcome to TM Workroom</CardTitle>
-        <CardDescription>You&apos;ve been invited to the team. Choose a password to finish setting up your account.</CardDescription>
+        <CardDescription>You&apos;ve been invited to the team. Add a photo, your role and a password to finish setting up your account.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <Label>Profile photo</Label>
+            <AvatarPicker value={photo} onChange={setPhoto} invalid={triedSubmit} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="job-title">Your role</Label>
+            <Input id="job-title" placeholder="e.g. Graphic Designer" value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)} required autoComplete="organization-title" />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="At least 8 characters"
+            <PasswordInput id="password" placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
               value={password} onChange={(e) => setPassword(e.target.value)}
-              required autoFocus autoComplete="new-password" />
+              required autoComplete="new-password" />
+            <PasswordStrength password={password} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm">Confirm password</Label>
-            <Input id="confirm" type="password" placeholder="Repeat your password"
+            <PasswordInput id="confirm" placeholder="Repeat your password"
               value={confirm} onChange={(e) => setConfirm(e.target.value)}
               required autoComplete="new-password" />
+            <PasswordMatch password={password} confirm={confirm} />
           </div>
           {error && <p className="text-sm text-status-overdue">{error}</p>}
           <Button type="submit" className="w-full bg-brand hover:bg-brand/90 text-white" disabled={loading}>

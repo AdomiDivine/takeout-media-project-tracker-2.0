@@ -45,7 +45,9 @@ function getGreeting() {
   return "Good evening";
 }
 
-export default function AdminDashboardShell({ userName }: { userName: string }) {
+export default function AdminDashboardShell({ userName, viewerRole }: { userName: string; viewerRole: string }) {
+  // Super admins count everyone on the app; admins only count the members they manage
+  const isSuperAdmin = viewerRole === "super_admin";
   const router = useRouter();
   const [memberCount, setMemberCount] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
@@ -64,7 +66,9 @@ export default function AdminDashboardShell({ userName }: { userName: string }) 
         { data: memberData },
         { data: activityData },
       ] = await Promise.all([
-        supabase.from("users").select("*", { count: "exact", head: true }).not("role", "eq", "super_admin"),
+        isSuperAdmin
+          ? supabase.from("users").select("*", { count: "exact", head: true })
+          : supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "member"),
         supabase.from("projects").select("*", { count: "exact", head: true }).eq("status", "active"),
         supabase.from("tasks")
           .select("*, project:projects(name)")
@@ -84,7 +88,7 @@ export default function AdminDashboardShell({ userName }: { userName: string }) 
       setLoading(false);
     }
     fetchAll();
-  }, []);
+  }, [isSuperAdmin]);
 
   if (loading) {
     return (
@@ -163,7 +167,7 @@ export default function AdminDashboardShell({ userName }: { userName: string }) 
       {/* Stats row */}
       <div className="grid grid-cols-5 gap-4">
         {[
-          { label: "Total Members",       value: memberCount,          icon: Users,         color: "text-blue-400",   bg: "bg-blue-500/10",   href: "/members"                    },
+          { label: isSuperAdmin ? "Total Users" : "Total Members", value: memberCount,          icon: Users,         color: "text-blue-400",   bg: "bg-blue-500/10",   href: "/members"                    },
           { label: "Active Projects",      value: projectCount,         icon: Briefcase,     color: "text-purple-400", bg: "bg-purple-500/10", href: "/projects"                   },
           { label: "Tasks In Progress",    value: stats.in_progress,    icon: Play,          color: "text-amber-400",  bg: "bg-amber-500/10",  href: "/tasks?status=in_progress"   },
           { label: "Overdue Tasks",        value: stats.overdue,        icon: AlertTriangle, color: "text-red-400",    bg: "bg-red-500/10",    href: "/tasks?status=overdue"       },

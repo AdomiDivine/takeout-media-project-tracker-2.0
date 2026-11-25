@@ -9,8 +9,6 @@ import ProgressRing from "./ProgressRing";
 import KanbanBoard from "./KanbanBoard";
 import MiniCalendar from "./MiniCalendar";
 import UpcomingDeadlines from "./UpcomingDeadlines";
-import TaskDonutChart from "./TaskDonutChart";
-import QuickActions from "./QuickActions";
 import NewTaskModal from "@/components/tasks/NewTaskModal";
 
 function getGreeting() {
@@ -62,8 +60,6 @@ export default function DashboardShell({ userName }: { userName: string }) {
       <div className="w-64 flex-shrink-0 space-y-4">
         <MiniCalendar tasks={allTasks} />
         <UpcomingDeadlines tasks={upcomingTasks} />
-        <TaskDonutChart stats={stats} />
-        <QuickActions />
       </div>
 
       <NewTaskModal
