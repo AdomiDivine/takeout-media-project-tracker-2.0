@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ImageUpload from "@/components/ui/image-upload";
-import { BarChart2, Bell, KeyRound, Palette, UserCheck, UserRound, UserX, Users, X } from "lucide-react";
+import { Activity, BarChart2, Bell, KeyRound, Palette, UserCheck, UserRound, UserX, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FIELD, SectionTitle, SettingRow } from "@/components/settings/SettingRow";
 import DeleteAccountSection from "@/components/settings/DeleteAccountSection";
+import UsageSection from "@/components/settings/UsageSection";
 import ReportsView from "@/components/reports/ReportsView";
 import { PasswordInput, PasswordMatch, PasswordStrength, isPasswordAcceptable, MIN_PASSWORD_LENGTH } from "@/components/ui/password-field";
 import AppearanceSection from "@/components/settings/AppearanceSection";
@@ -25,8 +26,8 @@ const roleLabels: Record<string, string> = {
   member:      "Member",
 };
 
-type SettingsTab = "profile" | "account" | "appearance" | "notifications" | "reports" | "members";
-const TAB_KEYS: SettingsTab[] = ["profile", "account", "appearance", "notifications", "reports", "members"];
+type SettingsTab = "profile" | "account" | "usage" | "appearance" | "notifications" | "reports" | "members";
+const TAB_KEYS: SettingsTab[] = ["profile", "account", "usage", "appearance", "notifications", "reports", "members"];
 
 // Who can deactivate whom: super admins can deactivate anyone but themselves; admins can deactivate members.
 function canDeactivateUser(viewer: User | null, target: User) {
@@ -289,6 +290,7 @@ export default function SettingsPage() {
   const tabs: { key: SettingsTab; label: string; icon: React.ElementType }[] = [
     { key: "profile", label: "Profile", icon: UserRound },
     { key: "account", label: "Account", icon: KeyRound },
+    { key: "usage", label: "Usage", icon: Activity },
     { key: "appearance", label: "Appearance", icon: Palette },
     { key: "notifications", label: "Notifications", icon: Bell },
     // Members download their own report here; admins use the Reports page
@@ -411,6 +413,9 @@ export default function SettingsPage() {
 
           {/* ── REPORTS (members): download your own report ── */}
           {activeTab === "reports" && !canManageMembers && <ReportsView title="My report" />}
+
+          {/* ── USAGE: how your work is going ── */}
+          {activeTab === "usage" && user && <UsageSection user={user} />}
 
           {/* ── APPEARANCE ── */}
           {activeTab === "appearance" && <AppearanceSection />}
