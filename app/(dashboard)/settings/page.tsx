@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ImageUpload from "@/components/ui/image-upload";
-import { UserCheck, UserX } from "lucide-react";
+import { KeyRound, UserCheck, UserRound, UserX, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types";
 
@@ -64,36 +64,57 @@ function ChangePasswordCard({ email }: { email: string }) {
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-      <div>
-        <h3 className="font-medium text-sm">Change password</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Use at least 8 characters.</p>
-      </div>
+    <form onSubmit={handleChangePassword}>
+      <SectionTitle>Change password</SectionTitle>
+      <SettingRow label="Current password" htmlFor="current-password">
+        <Input id="current-password" type="password" autoComplete="current-password" className={FIELD}
+          value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required />
+      </SettingRow>
+      <SettingRow label="New password" description="At least 8 characters." htmlFor="new-password">
+        <Input id="new-password" type="password" autoComplete="new-password" minLength={8} className={FIELD}
+          value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+      </SettingRow>
+      <SettingRow label="Confirm new password" htmlFor="confirm-password">
+        <Input id="confirm-password" type="password" autoComplete="new-password" minLength={8} className={FIELD}
+          value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+      </SettingRow>
 
-      <form onSubmit={handleChangePassword} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="current-password">Current password</Label>
-          <Input id="current-password" type="password" autoComplete="current-password"
-            value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="new-password">New password</Label>
-          <Input id="new-password" type="password" autoComplete="new-password" minLength={8}
-            value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm-password">Confirm new password</Label>
-          <Input id="confirm-password" type="password" autoComplete="new-password" minLength={8}
-            value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
-        </div>
-
-        {error && <p className="text-sm text-status-overdue">{error}</p>}
-        {saved && <p className="text-sm text-status-completed">Password updated.</p>}
-
+      <div className="flex items-center justify-end gap-3 pt-4">
+        {error && <p className="text-sm text-status-overdue mr-auto">{error}</p>}
+        {saved && <p className="text-sm text-status-completed mr-auto">Password updated.</p>}
         <Button type="submit" className="bg-brand hover:bg-brand/90 text-white" disabled={loading}>
           {loading ? "Updating…" : "Update password"}
         </Button>
-      </form>
+      </div>
+    </form>
+  );
+}
+
+// Layout helpers: a section heading and a "label on the left, control on the right" row
+const FIELD = "w-full sm:w-64";
+
+function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 mb-1">
+      <h3 className="text-sm font-semibold">{children}</h3>
+      {action}
+    </div>
+  );
+}
+
+function SettingRow({ label, description, htmlFor, children }: {
+  label: string;
+  description?: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-6 py-3.5 border-b border-border last:border-0">
+      <div className="min-w-0">
+        <Label htmlFor={htmlFor} className="text-sm font-normal">{label}</Label>
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+      </div>
+      <div className="flex-shrink-0 sm:text-right">{children}</div>
     </div>
   );
 }
@@ -255,9 +276,8 @@ export default function SettingsPage() {
 
   if (fetchLoading) {
     return (
-      <div className="space-y-5 max-w-2xl mx-auto">
-        <div className="h-7 w-24 bg-muted rounded animate-pulse" />
-        <div className="h-72 bg-muted rounded-xl animate-pulse" />
+      <div className="max-w-4xl mx-auto">
+        <div className="h-[520px] bg-muted rounded-xl animate-pulse" />
       </div>
     );
   }
@@ -265,203 +285,208 @@ export default function SettingsPage() {
   const canManageMembers = ["super_admin", "admin"].includes(user?.role ?? "");
   const isSuperAdmin = user?.role === "super_admin";
 
-  const tabs: { key: SettingsTab; label: string }[] = [
-    { key: "profile", label: "Profile" },
-    { key: "account", label: "Account" },
-    ...(canManageMembers ? [{ key: "members" as const, label: "Team Members" }] : []),
+  const tabs: { key: SettingsTab; label: string; icon: React.ElementType }[] = [
+    { key: "profile", label: "Profile", icon: UserRound },
+    { key: "account", label: "Account", icon: KeyRound },
+    ...(canManageMembers ? [{ key: "members" as const, label: "Team Members", icon: Users }] : []),
   ];
 
+  // Team list order: active members, then admins, then super admins; deactivated accounts last
+  const roleOrder: Record<string, number> = { member: 0, admin: 1, super_admin: 2 };
+  const sortedUsers = [...allUsers].sort((a, b) =>
+    Number(deactivatedIds.has(a.id)) - Number(deactivatedIds.has(b.id)) ||
+    (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9) ||
+    a.name.localeCompare(b.name)
+  );
+  const activeCount = allUsers.filter(u => !deactivatedIds.has(u.id)).length;
+
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <h2 className="text-lg font-semibold">Settings</h2>
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
-              activeTab === tab.key
-                ? "border-brand text-brand"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── PROFILE: how you appear to the team ── */}
-      {activeTab === "profile" && (
-        <div className="bg-card border border-border rounded-xl p-5 space-y-5">
-          <div className="flex items-center gap-5">
-            <ImageUpload
-              currentUrl={avatarUrl || null}
-              bucket="avatars"
-              shape="circle"
-              size="lg"
-              enableCrop
-              onUploaded={handleAvatarUploaded}
-            />
-            <div>
-              <p className="text-sm font-medium">{user?.name}</p>
-              {user?.job_title && <p className="text-xs text-muted-foreground mt-0.5">{user.job_title}</p>}
-              <p className="text-xs text-muted-foreground mt-0.5">Click the photo to change it</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="settings-name">Display name</Label>
-              <Input id="settings-name" value={name} onChange={e => setName(e.target.value)} required />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="settings-job-title">Job title <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input
-                id="settings-job-title"
-                placeholder="e.g. Graphic Designer, Content Writer…"
-                value={jobTitle}
-                onChange={e => setJobTitle(e.target.value)}
-              />
-            </div>
-
-            {error && <p className="text-sm text-status-overdue">{error}</p>}
-            {saved && <p className="text-sm text-status-completed">Changes saved.</p>}
-
-            <Button type="submit" className="bg-brand hover:bg-brand/90 text-white" disabled={loading}>
-              {loading ? "Saving…" : "Save changes"}
-            </Button>
-          </form>
-        </div>
-      )}
-
-      {/* ── ACCOUNT: login details and security ── */}
-      {activeTab === "account" && (
-        <div className="space-y-6">
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h3 className="font-medium text-sm">Account details</h3>
-
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={user?.email ?? ""} disabled className="opacity-60 cursor-not-allowed" />
-              <p className="text-xs text-muted-foreground">This is the email you log in with.</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Platform role</Label>
-              <Input value={roleLabels[user?.role ?? ""] ?? user?.role ?? ""} disabled className="opacity-60 cursor-not-allowed" />
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Member since {user ? new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—"}
-            </p>
-          </div>
-
-          {user && <ChangePasswordCard email={user.email} />}
-        </div>
-      )}
-
-      {/* ── TEAM MEMBERS: admin/super_admin only ── */}
-      {activeTab === "members" && canManageMembers && (
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-sm">Team Members</h3>
-            <span className="text-xs text-muted-foreground">{allUsers.length} member{allUsers.length !== 1 ? "s" : ""}</span>
-          </div>
-
-          <div className="space-y-2">
-            {/* Active people first, deactivated at the bottom */}
-            {[...allUsers]
-              .sort((a, b) => Number(deactivatedIds.has(a.id)) - Number(deactivatedIds.has(b.id)))
-              .map(member => (
-              <div key={member.id} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
-                {/* Avatar */}
-                <div className={cn("w-8 h-8 rounded-full bg-muted flex-shrink-0 overflow-hidden", deactivatedIds.has(member.id) && "opacity-40 grayscale")}>
-                  {member.avatar_url
-                    ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-muted-foreground">
-                        {member.name.charAt(0).toUpperCase()}
-                      </div>
-                  }
-                </div>
-
-                {/* Info — greyed out when deactivated (the action button stays full colour) */}
-                <div className={cn("flex-1 min-w-0", deactivatedIds.has(member.id) && "opacity-50")}>
-                  <p className="text-sm font-medium leading-tight truncate">
-                    {member.name}
-                    {member.id === user?.id && <span className="text-xs text-muted-foreground ml-1">(you)</span>}
-                    {deactivatedIds.has(member.id) && (
-                      <span className="ml-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border align-middle">
-                        Deactivated
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {member.email} · {roleLabels[member.role] ?? member.role}
-                  </p>
-                </div>
-
-                {updatingRole === member.id && (
-                  <div className="w-3 h-3 border-2 border-brand border-t-transparent rounded-full animate-spin flex-shrink-0" />
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-card border border-border rounded-xl overflow-hidden flex flex-col md:flex-row md:min-h-[560px]">
+        {/* Side menu */}
+        <nav className="md:w-52 flex-shrink-0 border-b md:border-b-0 md:border-r border-border p-3">
+          <h2 className="text-sm font-semibold px-2.5 pb-3 pt-1">Settings</h2>
+          <div className="flex md:flex-col gap-1 overflow-x-auto">
+            {tabs.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveTab(key)}
+                className={cn(
+                  "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm whitespace-nowrap transition-colors text-left",
+                  activeTab === key
+                    ? "bg-muted text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* Super admins can change anyone's role except their own */}
-                  {isSuperAdmin && member.id !== user?.id && (
-                    <Select
-                      value={member.role}
-                      onValueChange={(v) => v && handleRoleChange(member.id, v)}
-                    >
-                      <SelectTrigger className="w-32 h-7 text-xs" aria-label={`Change ${member.name}'s role`}>
-                        <SelectValue>
-                          {roleLabels[member.role] ?? member.role}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="member"      label="Member">Member</SelectItem>
-                        <SelectItem value="admin"       label="Admin">Admin</SelectItem>
-                        <SelectItem value="super_admin" label="Super Admin">Super Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-
-                  {canDeactivateUser(user, member) && (
-                    deactivatedIds.has(member.id) ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 gap-1.5 text-xs"
-                        disabled={reactivating === member.id}
-                        onClick={() => handleReactivate(member)}
-                      >
-                        <UserCheck size={12} />
-                        {reactivating === member.id ? "Reactivating…" : "Reactivate"}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 gap-1.5 text-xs text-status-overdue hover:text-status-overdue border-status-overdue/30 hover:bg-status-overdue/10"
-                        onClick={() => setUserToDeactivate(member)}
-                      >
-                        <UserX size={12} />
-                        Deactivate
-                      </Button>
-                    )
-                  )}
-                </div>
-              </div>
+              >
+                <Icon size={16} />
+                {label}
+              </button>
             ))}
           </div>
+        </nav>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 p-5 sm:p-6 md:max-h-[calc(100dvh-8rem)] md:overflow-y-auto">
+
+          {/* ── PROFILE: how you appear to the team ── */}
+          {activeTab === "profile" && (
+            <form onSubmit={handleSave}>
+              <SectionTitle>Profile</SectionTitle>
+              <SettingRow label="Profile photo" description="PNG or JPG. Click the photo to change it.">
+                <ImageUpload
+                  currentUrl={avatarUrl || null}
+                  bucket="avatars"
+                  shape="circle"
+                  size="sm"
+                  enableCrop
+                  onUploaded={handleAvatarUploaded}
+                />
+              </SettingRow>
+              <SettingRow label="Display name" description="How your name appears to the team." htmlFor="settings-name">
+                <Input id="settings-name" className={FIELD} value={name} onChange={e => setName(e.target.value)} required />
+              </SettingRow>
+              <SettingRow label="Job title" description="Optional. Shown on your profile." htmlFor="settings-job-title">
+                <Input
+                  id="settings-job-title"
+                  className={FIELD}
+                  placeholder="e.g. Graphic Designer"
+                  value={jobTitle}
+                  onChange={e => setJobTitle(e.target.value)}
+                />
+              </SettingRow>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                {error && <p className="text-sm text-status-overdue mr-auto">{error}</p>}
+                {saved && <p className="text-sm text-status-completed mr-auto">Changes saved.</p>}
+                <Button type="submit" className="bg-brand hover:bg-brand/90 text-white" disabled={loading}>
+                  {loading ? "Saving…" : "Save changes"}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* ── ACCOUNT: login details and security ── */}
+          {activeTab === "account" && (
+            <div className="space-y-8">
+              <div>
+                <SectionTitle>Account</SectionTitle>
+                <SettingRow label="Email" description="The email you log in with.">
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                </SettingRow>
+                <SettingRow label="Platform role">
+                  <p className="text-sm text-muted-foreground">{roleLabels[user?.role ?? ""] ?? user?.role}</p>
+                </SettingRow>
+                <SettingRow label="Member since">
+                  <p className="text-sm text-muted-foreground">
+                    {user ? new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—"}
+                  </p>
+                </SettingRow>
+              </div>
+
+              {user && <ChangePasswordCard email={user.email} />}
+            </div>
+          )}
+
+          {/* ── TEAM MEMBERS: admin/super_admin only ── */}
+          {activeTab === "members" && canManageMembers && (
+            <div>
+              <SectionTitle action={
+                <span className="text-xs text-muted-foreground">
+                  {activeCount} active{allUsers.length > activeCount && ` · ${allUsers.length - activeCount} deactivated`}
+                </span>
+              }>
+                Team Members
+              </SectionTitle>
+
+              <div>
+                {sortedUsers.map(member => (
+                  <div key={member.id} className="flex items-center gap-3 py-3 border-b border-border last:border-0">
+                    {/* Avatar */}
+                    <div className={cn("w-8 h-8 rounded-full bg-muted flex-shrink-0 overflow-hidden", deactivatedIds.has(member.id) && "opacity-40 grayscale")}>
+                      {member.avatar_url
+                        ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                            {member.name.charAt(0).toUpperCase()}
+                          </div>
+                      }
+                    </div>
+
+                    {/* Info — greyed out when deactivated (the action button stays full colour) */}
+                    <div className={cn("flex-1 min-w-0", deactivatedIds.has(member.id) && "opacity-50")}>
+                      <p className="text-sm font-medium leading-tight truncate">
+                        {member.name}
+                        {member.id === user?.id && <span className="text-xs text-muted-foreground ml-1">(you)</span>}
+                        {deactivatedIds.has(member.id) && (
+                          <span className="ml-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border align-middle">
+                            Deactivated
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {member.email} · {roleLabels[member.role] ?? member.role}
+                      </p>
+                    </div>
+
+                    {updatingRole === member.id && (
+                      <div className="w-3 h-3 border-2 border-brand border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Super admins can change anyone's role except their own */}
+                      {isSuperAdmin && member.id !== user?.id && (
+                        <Select
+                          value={member.role}
+                          onValueChange={(v) => v && handleRoleChange(member.id, v)}
+                        >
+                          <SelectTrigger className="w-32 h-7 text-xs" aria-label={`Change ${member.name}'s role`}>
+                            <SelectValue>
+                              {roleLabels[member.role] ?? member.role}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="member"      label="Member">Member</SelectItem>
+                            <SelectItem value="admin"       label="Admin">Admin</SelectItem>
+                            <SelectItem value="super_admin" label="Super Admin">Super Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {canDeactivateUser(user, member) && (
+                        deactivatedIds.has(member.id) ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1.5 text-xs"
+                            disabled={reactivating === member.id}
+                            onClick={() => handleReactivate(member)}
+                          >
+                            <UserCheck size={12} />
+                            {reactivating === member.id ? "Reactivating…" : "Reactivate"}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1.5 text-xs text-status-overdue hover:text-status-overdue border-status-overdue/30 hover:bg-status-overdue/10"
+                            onClick={() => setUserToDeactivate(member)}
+                          >
+                            <UserX size={12} />
+                            Deactivate
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <DeactivateUserDialog
         target={userToDeactivate}
