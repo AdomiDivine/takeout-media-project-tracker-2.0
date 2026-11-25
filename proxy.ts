@@ -36,6 +36,17 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith(route)
   );
 
+  // Deactivated accounts (banned by an admin) are signed out immediately
+  if (user?.banned_until && new Date(user.banned_until).getTime() > Date.now()) {
+    await supabase.auth.signOut();
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "?deactivated=1";
+    const redirect = NextResponse.redirect(loginUrl);
+    supabaseResponse.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    return redirect;
+  }
+
   if (!user && !isPublicRoute) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";

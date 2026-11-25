@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ImageUpload from "@/components/ui/image-upload";
-import { Trash2 } from "lucide-react";
+import { UserCheck, UserX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types";
 
@@ -20,8 +20,8 @@ const roleLabels: Record<string, string> = {
 
 type SettingsTab = "profile" | "account" | "members";
 
-// Who can delete whom: super admins can delete anyone but themselves; admins can delete members.
-function canDeleteUser(viewer: User | null, target: User) {
+// Who can deactivate whom: super admins can deactivate anyone but themselves; admins can deactivate members.
+function canDeactivateUser(viewer: User | null, target: User) {
   if (!viewer || viewer.id === target.id) return false;
   if (viewer.role === "super_admin") return true;
   return viewer.role === "admin" && target.role === "member";
@@ -98,55 +98,55 @@ function ChangePasswordCard({ email }: { email: string }) {
   );
 }
 
-function DeleteUserDialog({ target, onClose, onDeleted }: {
+function DeactivateUserDialog({ target, onClose, onDeactivated }: {
   target: User | null;
   onClose: () => void;
-  onDeleted: (userId: string) => void;
+  onDeactivated: (userId: string) => void;
 }) {
-  const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleDelete() {
+  async function handleDeactivate() {
     if (!target) return;
-    setDeleting(true); setError("");
-    const res = await fetch("/api/users/delete", {
-      method: "DELETE",
+    setSaving(true); setError("");
+    const res = await fetch("/api/users/deactivate", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: target.id }),
+      body: JSON.stringify({ userId: target.id, active: false }),
     });
-    setDeleting(false);
+    setSaving(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Failed to delete user");
+      setError(data.error ?? "Failed to deactivate user");
       return;
     }
-    onDeleted(target.id);
+    onDeactivated(target.id);
   }
 
   return (
-    <Dialog open={!!target} onOpenChange={(o) => { if (!o && !deleting) { setError(""); onClose(); } }}>
+    <Dialog open={!!target} onOpenChange={(o) => { if (!o && !saving) { setError(""); onClose(); } }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Delete {target?.name}&apos;s account?</DialogTitle>
+          <DialogTitle>Deactivate {target?.name}?</DialogTitle>
           <DialogDescription>
-            {target?.email} will no longer be able to log in. This can&apos;t be undone.
+            {target?.email} will be signed out and won&apos;t be able to log in.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="text-sm space-y-2">
-          <p><span className="font-medium">Kept:</span> tasks, projects and brands they created, and the activity log.</p>
-          <p><span className="font-medium">Removed:</span> their task assignments, comments, notifications and learning records.</p>
-        </div>
+        <p className="text-sm">
+          Everything they did stays: tasks, comments, assignments and learning records.
+          You can reactivate the account at any time.
+        </p>
 
         {error && <p className="text-sm text-status-overdue">{error}</p>}
 
         <div className="flex gap-2 pt-1">
-          <Button type="button" variant="outline" className="flex-1" disabled={deleting}
+          <Button type="button" variant="outline" className="flex-1" disabled={saving}
             onClick={() => { setError(""); onClose(); }}>
             Cancel
           </Button>
-          <Button type="button" variant="destructive" className="flex-1" disabled={deleting} onClick={handleDelete}>
-            {deleting ? "Deleting…" : "Delete account"}
+          <Button type="button" variant="destructive" className="flex-1" disabled={saving} onClick={handleDeactivate}>
+            {saving ? "Deactivating…" : "Deactivate"}
           </Button>
         </div>
       </DialogContent>
@@ -168,7 +168,9 @@ export default function SettingsPage() {
   // Members management (admin/super_admin only)
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
+  const [deactivatedIds, setDeactivatedIds] = useState<Set<string>>(new Set());
+  const [reactivating, setReactivating] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchUser() {
@@ -185,6 +187,11 @@ export default function SettingsPage() {
         if (["super_admin", "admin"].includes(data.role)) {
           const { data: users } = await supabase.from("users").select("*").order("name");
           if (users) setAllUsers(users as User[]);
+          const statusRes = await fetch("/api/users/deactivate");
+          if (statusRes.ok) {
+            const { deactivated } = await statusRes.json();
+            setDeactivatedIds(new Set(deactivated as string[]));
+          }
           // Links like /settings?tab=members open straight to the Team Members tab
           if (new URLSearchParams(window.location.search).get("tab") === "members") setActiveTab("members");
         }
@@ -228,6 +235,22 @@ export default function SettingsPage() {
       if (userId === user?.id) setUser(prev => prev ? { ...prev, role: newRole as User["role"] } : prev);
     }
     setUpdatingRole(null);
+  }
+
+  async function handleReactivate(member: User) {
+    setReactivating(member.id);
+    const res = await fetch("/api/users/deactivate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: member.id, active: true }),
+    });
+    setReactivating(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error ?? "Failed to reactivate user");
+      return;
+    }
+    setDeactivatedIds(prev => { const next = new Set(prev); next.delete(member.id); return next; });
   }
 
   if (fetchLoading) {
@@ -354,7 +377,7 @@ export default function SettingsPage() {
             {allUsers.map(member => (
               <div key={member.id} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
                 {/* Avatar */}
-                <div className="w-8 h-8 rounded-full bg-muted flex-shrink-0 overflow-hidden">
+                <div className={cn("w-8 h-8 rounded-full bg-muted flex-shrink-0 overflow-hidden", deactivatedIds.has(member.id) && "opacity-40 grayscale")}>
                   {member.avatar_url
                     ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-muted-foreground">
@@ -368,6 +391,11 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium leading-tight truncate">
                     {member.name}
                     {member.id === user?.id && <span className="text-xs text-muted-foreground ml-1">(you)</span>}
+                    {deactivatedIds.has(member.id) && (
+                      <span className="ml-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border align-middle">
+                        Deactivated
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {member.email} · {roleLabels[member.role] ?? member.role}
@@ -399,17 +427,31 @@ export default function SettingsPage() {
                     </Select>
                   )}
 
-                  {canDeleteUser(user, member) && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 gap-1.5 text-xs text-status-overdue hover:text-status-overdue border-status-overdue/30 hover:bg-status-overdue/10"
-                      onClick={() => setUserToDelete(member)}
-                    >
-                      <Trash2 size={12} />
-                      Delete
-                    </Button>
+                  {canDeactivateUser(user, member) && (
+                    deactivatedIds.has(member.id) ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={reactivating === member.id}
+                        onClick={() => handleReactivate(member)}
+                      >
+                        <UserCheck size={12} />
+                        {reactivating === member.id ? "Reactivating…" : "Reactivate"}
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs text-status-overdue hover:text-status-overdue border-status-overdue/30 hover:bg-status-overdue/10"
+                        onClick={() => setUserToDeactivate(member)}
+                      >
+                        <UserX size={12} />
+                        Deactivate
+                      </Button>
+                    )
                   )}
                 </div>
               </div>
@@ -418,12 +460,12 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <DeleteUserDialog
-        target={userToDelete}
-        onClose={() => setUserToDelete(null)}
-        onDeleted={(id) => {
-          setAllUsers(prev => prev.filter(u => u.id !== id));
-          setUserToDelete(null);
+      <DeactivateUserDialog
+        target={userToDeactivate}
+        onClose={() => setUserToDeactivate(null)}
+        onDeactivated={(id) => {
+          setDeactivatedIds(prev => new Set(prev).add(id));
+          setUserToDeactivate(null);
         }}
       />
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -9,12 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+const DEACTIVATED_MESSAGE = "This account has been deactivated. Contact an admin if you think this is a mistake.";
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Shown when a deactivated user was signed out by the proxy
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("deactivated") === "1") {
+      setError(DEACTIVATED_MESSAGE);
+    }
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -25,7 +34,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError(error.message);
+      setError(/banned/i.test(error.message) ? DEACTIVATED_MESSAGE : error.message);
       setLoading(false);
       return;
     }
