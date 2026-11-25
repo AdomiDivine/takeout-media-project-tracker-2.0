@@ -19,6 +19,16 @@ interface WebhookPayload {
   };
 }
 
+// Matches the categories in Settings > Notifications (lib/notification-prefs.ts)
+const NOTIFICATION_CATEGORY: Record<string, string> = {
+  assignment:    "assigned",
+  collaboration: "assigned",
+  deadline:      "overdue",
+  overdue:       "overdue",
+  completion:    "completed",
+  blocker:       "blocker",
+};
+
 const TYPE_EMOJI: Record<string, string> = {
   assignment:    "📋",
   collaboration: "🤝",
@@ -92,7 +102,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const { data: user, error } = await supabase
       .from("users")
-      .select("name, email")
+      .select("*")
       .eq("id", user_id)
       .single();
 
@@ -100,6 +110,13 @@ Deno.serve(async (req) => {
       console.error("User fetch error:", error?.message ?? "No email");
       return new Response("User not found", { status: 200 });
     }
+
+    // Respect Settings > Notifications (missing = on)
+    const category = NOTIFICATION_CATEGORY[notifType];
+    if (category && user.notification_prefs?.email?.[category] === false) {
+      return new Response("Skipped: user turned off these emails", { status: 200 });
+    }
+    if (user.preferred_name) user.name = user.preferred_name;
 
     const emoji   = TYPE_EMOJI[notifType] ?? "🔔";
     const subject = `${emoji} ${message}`;

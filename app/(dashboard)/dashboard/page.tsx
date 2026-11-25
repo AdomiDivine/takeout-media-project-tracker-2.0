@@ -10,15 +10,15 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("role, name")
+    .select("*")
     .eq("id", user.id)
     .single();
 
   const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
 
   if (isAdmin) {
-    return <AdminDashboardShell userName={profile?.name ?? "there"} />;
+    return <AdminDashboardShell userName={profile?.preferred_name || profile?.name || "there"} />;
   }
 
-  return <DashboardShell userName={profile?.name ?? "there"} />;
+  return <DashboardShell userName={profile?.preferred_name || profile?.name || "there"} />;
 }

@@ -23,8 +23,10 @@ export default function NotificationBell({ userId }: { userId: string }) {
       .select("*, task:tasks(id, project_id)")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(20);
-    if (data) setNotifications(data as Notification[]);
+      .limit(40);
+    // Skip ones the user switched off in Settings > Notifications (filtered here,
+    // not in the query, so this keeps working before migration 027 adds the column)
+    if (data) setNotifications((data as Notification[]).filter(n => !n.hidden).slice(0, 20));
   }
 
   async function markAllRead() {

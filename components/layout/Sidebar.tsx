@@ -6,6 +6,7 @@ import { LayoutDashboard, CheckSquare, Calendar, Activity, Archive, BarChart2, F
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { applyTheme, getThemePreference, resolveDark, THEME_EVENT } from "@/lib/theme";
 import type { Brand, Project, User } from "@/types";
 
 interface SidebarProps {
@@ -48,10 +49,21 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
   const navItems = isAdmin ? adminNavItems : userNavItems;
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    const dark = stored !== "light";
-    setIsDark(dark);
-    document.documentElement.classList.toggle("dark", dark);
+    // Apply the saved theme, follow the computer's setting when "system",
+    // and stay in sync when the theme is changed in Settings > Appearance.
+    const sync = () => {
+      const dark = resolveDark(getThemePreference());
+      setIsDark(dark);
+      document.documentElement.classList.toggle("dark", dark);
+    };
+    sync();
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener("change", sync);
+    window.addEventListener(THEME_EVENT, sync);
+    return () => {
+      media.removeEventListener("change", sync);
+      window.removeEventListener(THEME_EVENT, sync);
+    };
   }, []);
 
   // Auto-expand the brand whose project is currently active
@@ -66,10 +78,7 @@ export default function Sidebar({ user, brands, projects }: SidebarProps) {
   }, [pathname, projects]);
 
   function toggleTheme() {
-    const next = !isDark;
-    setIsDark(next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", next);
+    applyTheme(isDark ? "light" : "dark");
   }
 
   async function handleLogout() {

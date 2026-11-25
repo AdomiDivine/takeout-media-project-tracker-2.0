@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
+import { isNotificationEnabled } from "@/lib/notification-prefs";
 import { format, differenceInCalendarDays } from "date-fns";
 
 export async function GET(req: NextRequest) {
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
       .select(`
         id, name, deadline, priority,
         project:projects(name),
-        members:task_members(user:users(name, email))
+        members:task_members(user:users(*))
       `)
       .eq("status", "overdue")
       .eq("overdue_email_sent", false)
@@ -42,7 +43,9 @@ export async function GET(req: NextRequest) {
       const priority = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
       const members: { name: string; email: string }[] = ((task.members as any[]) ?? [])
         .map((m: any) => m.user)
-        .filter((u: any) => u?.email);
+        // Skip people who turned off overdue emails in Settings > Notifications
+        .filter((u: any) => u?.email && isNotificationEnabled(u.notification_prefs, "email", "overdue"))
+        .map((u: any) => ({ ...u, name: u.preferred_name || u.name }));
 
       for (const member of members) {
         await sendEmail({

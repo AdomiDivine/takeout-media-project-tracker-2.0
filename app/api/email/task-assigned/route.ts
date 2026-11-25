@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
+import { isNotificationEnabled } from "@/lib/notification-prefs";
 import { format } from "date-fns";
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,8 @@ export async function POST(req: NextRequest) {
         .select("name, deadline, priority, project:projects(name), created_by")
         .eq("id", taskId)
         .single(),
-      supabase.from("users").select("name, email").eq("id", assignedUserId).single(),
+      // "*" so this keeps working whether or not migration 027's columns exist yet
+      supabase.from("users").select("*").eq("id", assignedUserId).single(),
       assignedById
         ? supabase.from("users").select("name").eq("id", assignedById).single()
         : Promise.resolve({ data: null }),
@@ -46,7 +48,12 @@ export async function POST(req: NextRequest) {
     const priorityLabel = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
     const priorityColor = task.priority === "high" ? "#e74c3c" : task.priority === "medium" ? "#f39c12" : "#27ae60";
 
-    const displayName = assigneeName ?? "there";
+    // Respect Settings > Notifications
+    if (!isNotificationEnabled(assignee?.notification_prefs, "email", "assigned")) {
+      return NextResponse.json({ ok: true, skipped: "user turned off assignment emails" });
+    }
+
+    const displayName = assignee?.preferred_name || assigneeName || "there";
 
     await sendEmail({
       to: assigneeEmail,

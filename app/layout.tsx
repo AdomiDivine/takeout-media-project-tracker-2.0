@@ -24,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${elmSans.variable} dark h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
-        <script dangerouslySetInnerHTML={{ __html: `(function(){const t=localStorage.getItem('theme');if(t==='light')document.documentElement.classList.remove('dark');})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{const t=localStorage.getItem('theme');if(t==='light'||(t==='system'&&!window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.remove('dark');}catch(e){}})();` }} />
         {children}
       </body>
     </html>

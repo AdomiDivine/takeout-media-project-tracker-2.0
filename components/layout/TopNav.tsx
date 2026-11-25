@@ -110,7 +110,7 @@ export default function TopNav({ user }: TopNavProps) {
 
   const isProjectPage = /^\/projects\/.+/.test(pathname);
   const pageLabel = pageLabels[pathname] ?? null;
-  const firstName = user.name.split(" ")[0];
+  const firstName = user.preferred_name || user.name.split(" ")[0];
 
   return (
     <>

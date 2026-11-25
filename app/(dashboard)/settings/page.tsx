@@ -8,7 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ImageUpload from "@/components/ui/image-upload";
-import { KeyRound, UserCheck, UserRound, UserX, Users } from "lucide-react";
+import { Bell, KeyRound, Palette, UserCheck, UserRound, UserX, Users } from "lucide-react";
+import { FIELD, SectionTitle, SettingRow } from "@/components/settings/SettingRow";
+import JobTitleField from "@/components/settings/JobTitleField";
+import AppearanceSection from "@/components/settings/AppearanceSection";
+import NotificationsSection from "@/components/settings/NotificationsSection";
+import SessionsSection from "@/components/settings/SessionsSection";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types";
 
@@ -18,7 +23,8 @@ const roleLabels: Record<string, string> = {
   member:      "Member",
 };
 
-type SettingsTab = "profile" | "account" | "members";
+type SettingsTab = "profile" | "account" | "appearance" | "notifications" | "members";
+const TAB_KEYS: SettingsTab[] = ["profile", "account", "appearance", "notifications", "members"];
 
 // Who can deactivate whom: super admins can deactivate anyone but themselves; admins can deactivate members.
 function canDeactivateUser(viewer: User | null, target: User) {
@@ -90,35 +96,6 @@ function ChangePasswordCard({ email }: { email: string }) {
   );
 }
 
-// Layout helpers: a section heading and a "label on the left, control on the right" row
-const FIELD = "w-full sm:w-64";
-
-function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3 mb-1">
-      <h3 className="text-sm font-semibold">{children}</h3>
-      {action}
-    </div>
-  );
-}
-
-function SettingRow({ label, description, htmlFor, children }: {
-  label: string;
-  description?: string;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-6 py-3.5 border-b border-border last:border-0">
-      <div className="min-w-0">
-        <Label htmlFor={htmlFor} className="text-sm font-normal">{label}</Label>
-        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
-      </div>
-      <div className="flex-shrink-0 sm:text-right">{children}</div>
-    </div>
-  );
-}
-
 function DeactivateUserDialog({ target, onClose, onDeactivated }: {
   target: User | null;
   onClose: () => void;
@@ -180,6 +157,7 @@ export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
+  const [preferredName, setPreferredName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -203,6 +181,7 @@ export default function SettingsPage() {
         setUser(data as User);
         setName(data.name);
         setJobTitle(data.job_title ?? "");
+        setPreferredName(data.preferred_name ?? "");
         setAvatarUrl(data.avatar_url ?? "");
 
         if (["super_admin", "admin"].includes(data.role)) {
@@ -213,10 +192,12 @@ export default function SettingsPage() {
             const { users: statuses } = await statusRes.json() as { users: Record<string, { deactivated: boolean }> };
             setDeactivatedIds(new Set(Object.keys(statuses).filter(id => statuses[id].deactivated)));
           }
-          // Links like /settings?tab=members open straight to the Team Members tab
-          if (new URLSearchParams(window.location.search).get("tab") === "members") setActiveTab("members");
         }
-        if (new URLSearchParams(window.location.search).get("tab") === "account") setActiveTab("account");
+        // Links like /settings?tab=members open straight to that tab
+        const requested = new URLSearchParams(window.location.search).get("tab") as SettingsTab | null;
+        if (requested && TAB_KEYS.includes(requested) && (requested !== "members" || ["super_admin", "admin"].includes(data.role))) {
+          setActiveTab(requested);
+        }
       }
       setFetchLoading(false);
     }
@@ -238,11 +219,14 @@ export default function SettingsPage() {
     setLoading(true); setError(""); setSaved(false);
 
     const supabase = createClient();
-    const { error: updateError } = await supabase.from("users").update({ name, job_title: jobTitle || null }).eq("id", user.id);
+    const updates: Record<string, string | null> = { name, job_title: jobTitle.trim() || null };
+    // preferred_name only exists once migration 027 has been run
+    if ("preferred_name" in user) updates.preferred_name = preferredName.trim() || null;
+    const { error: updateError } = await supabase.from("users").update(updates).eq("id", user.id);
 
     setLoading(false);
     if (updateError) { setError(updateError.message); return; }
-    setUser(prev => prev ? { ...prev, name } : prev);
+    setUser(prev => prev ? { ...prev, name, job_title: jobTitle.trim() || null, preferred_name: preferredName.trim() || null } : prev);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
@@ -288,6 +272,8 @@ export default function SettingsPage() {
   const tabs: { key: SettingsTab; label: string; icon: React.ElementType }[] = [
     { key: "profile", label: "Profile", icon: UserRound },
     { key: "account", label: "Account", icon: KeyRound },
+    { key: "appearance", label: "Appearance", icon: Palette },
+    { key: "notifications", label: "Notifications", icon: Bell },
     ...(canManageMembers ? [{ key: "members" as const, label: "Team Members", icon: Users }] : []),
   ];
 
@@ -346,14 +332,14 @@ export default function SettingsPage() {
               <SettingRow label="Display name" description="How your name appears to the team." htmlFor="settings-name">
                 <Input id="settings-name" className={FIELD} value={name} onChange={e => setName(e.target.value)} required />
               </SettingRow>
-              <SettingRow label="Job title" description="Optional. Shown on your profile." htmlFor="settings-job-title">
-                <Input
-                  id="settings-job-title"
-                  className={FIELD}
-                  placeholder="e.g. Graphic Designer"
-                  value={jobTitle}
-                  onChange={e => setJobTitle(e.target.value)}
-                />
+              {user && "preferred_name" in user && (
+                <SettingRow label="What should we call you?" description="Used in greetings and emails. Leave blank to use your first name." htmlFor="settings-preferred-name">
+                  <Input id="settings-preferred-name" className={FIELD} placeholder={name.split(" ")[0]}
+                    value={preferredName} onChange={e => setPreferredName(e.target.value)} />
+                </SettingRow>
+              )}
+              <SettingRow label="Job title" description="Optional. Shown on your profile.">
+                <JobTitleField value={jobTitle} onChange={setJobTitle} />
               </SettingRow>
 
               <div className="flex items-center justify-end gap-3 pt-4">
@@ -385,7 +371,20 @@ export default function SettingsPage() {
               </div>
 
               {user && <ChangePasswordCard email={user.email} />}
+
+              <SessionsSection />
             </div>
+          )}
+
+          {/* ── APPEARANCE ── */}
+          {activeTab === "appearance" && <AppearanceSection />}
+
+          {/* ── NOTIFICATIONS ── */}
+          {activeTab === "notifications" && user && (
+            <NotificationsSection
+              user={user}
+              onSaved={(prefs) => setUser(prev => prev ? { ...prev, notification_prefs: prefs } : prev)}
+            />
           )}
 
           {/* ── TEAM MEMBERS: admin/super_admin only ── */}

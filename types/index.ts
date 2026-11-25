@@ -1,3 +1,5 @@
+import type { NotificationPrefs } from "@/lib/notification-prefs";
+
 export type UserRole = "super_admin" | "admin" | "member";
 export type ProjectStatus = "active" | "on_hold" | "completed";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "overdue";
@@ -23,6 +25,9 @@ export interface User {
   avatar_url: string | null;
   job_title: string | null;
   created_at: string;
+  // Added in migration 027 — optional so the app still works before it's applied
+  preferred_name?: string | null;
+  notification_prefs?: NotificationPrefs | null;
 }
 
 export interface Brand {
@@ -126,6 +131,8 @@ export interface Notification {
   task_id: string | null;
   created_at: string;
   task?: Task;
+  // Added in migration 027: true when the user switched this kind of in-app notification off
+  hidden?: boolean;
 }
 
 export interface ActivityLog {
