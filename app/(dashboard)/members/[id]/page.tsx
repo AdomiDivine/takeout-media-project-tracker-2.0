@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useUserStatuses } from "@/lib/hooks/useUserStatuses";
 import type { User, Task } from "@/types";
 
 const ROLE_STYLES: Record<string, string> = {
@@ -49,6 +50,7 @@ export default function MemberDetailPage() {
   const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "in_progress" | "completed" | "overdue">("all");
+  const { statuses } = useUserStatuses();
 
   useEffect(() => {
     async function fetchData() {
@@ -57,18 +59,18 @@ export default function MemberDetailPage() {
       const [{ data: memberData }, { data: createdTasks }, { data: memberTaskIds }, { data: activityData }] =
         await Promise.all([
           supabase.from("users").select("*").eq("id", id).single(),
-          supabase.from("tasks").select("*, project:projects(name)").eq("created_by", id).is("deleted_at", null),
+          supabase.from("tasks").select("*, project:projects(id, name, brand:brands(id, name))").eq("created_by", id).is("deleted_at", null),
           supabase.from("task_members").select("task_id").eq("user_id", id),
           supabase.from("activity_log")
             .select("*, task:tasks(name), project:projects(name)")
             .eq("user_id", id)
             .order("created_at", { ascending: false })
-            .limit(20),
+            .limit(50),
         ]);
 
       const assignedIds = (memberTaskIds ?? []).map((m: any) => m.task_id);
       const { data: assignedTasks } = assignedIds.length > 0
-        ? await supabase.from("tasks").select("*, project:projects(name)").is("deleted_at", null).in("id", assignedIds)
+        ? await supabase.from("tasks").select("*, project:projects(id, name, brand:brands(id, name))").is("deleted_at", null).in("id", assignedIds)
         : { data: [] };
 
       const allTasksMap = new Map<string, Task>();
@@ -106,6 +108,32 @@ export default function MemberDetailPage() {
 
   const filtered = activeTab === "all" ? tasks : tasks.filter(t => t.status === activeTab);
 
+  const status = statuses[member.id];
+  const deactivated = !!status?.deactivated;
+
+  // Work summary / handover report: brands and projects this person worked on
+  type ProjRef = { id: string; name: string; brand?: { id: string; name: string } | null } | null;
+  const brandMap = new Map<string, { id: string; name: string; tasks: number; done: number }>();
+  const projectMap = new Map<string, { id: string; name: string; brand: string | null; tasks: number; done: number }>();
+  for (const t of tasks) {
+    const p = t.project as unknown as ProjRef;
+    if (!p) continue;
+    const isDone = t.status === "completed" ? 1 : 0;
+    const proj = projectMap.get(p.id) ?? { id: p.id, name: p.name, brand: p.brand?.name ?? null, tasks: 0, done: 0 };
+    proj.tasks++; proj.done += isDone;
+    projectMap.set(p.id, proj);
+    if (p.brand) {
+      const b = brandMap.get(p.brand.id) ?? { id: p.brand.id, name: p.brand.name, tasks: 0, done: 0 };
+      b.tasks++; b.done += isDone;
+      brandMap.set(p.brand.id, b);
+    }
+  }
+  const brandsWorkedOn = [...brandMap.values()].sort((a, b) => b.tasks - a.tasks);
+  const projectsWorkedOn = [...projectMap.values()].sort((a, b) => b.tasks - a.tasks);
+  const unfinished = tasks
+    .filter(t => t.status !== "completed")
+    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+
   const tabs: { key: typeof activeTab; label: string; count: number }[] = [
     { key: "all",         label: "All",         count: stats.total },
     { key: "in_progress", label: "In Progress",  count: stats.in_progress },
@@ -122,7 +150,7 @@ export default function MemberDetailPage() {
 
       {/* Profile card */}
       <div className="bg-card border border-border rounded-xl p-5 flex items-start gap-4">
-        <div className="w-16 h-16 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <div className={cn("w-16 h-16 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0 overflow-hidden", deactivated && "opacity-50 grayscale")}>
           {member.avatar_url ? (
             <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
           ) : (
@@ -135,15 +163,97 @@ export default function MemberDetailPage() {
             <p className="text-sm font-medium text-brand mt-0.5">{member.job_title}</p>
           )}
           <p className="text-sm text-muted-foreground mt-0.5">{member.email}</p>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <Badge variant="outline" className={cn("text-xs", ROLE_STYLES[member.role])}>
               {ROLE_LABELS[member.role]}
             </Badge>
+            {deactivated && (
+              <Badge variant="outline" className="text-xs bg-muted text-muted-foreground border-border">
+                Deactivated
+              </Badge>
+            )}
             <span className="text-xs text-muted-foreground">
               Member since {format(parseISO(member.created_at), "MMMM yyyy")}
             </span>
+            {status && (
+              <span className="text-xs text-muted-foreground">
+                · {status.last_active
+                    ? `Last active ${formatDistanceToNow(parseISO(status.last_active), { addSuffix: true })}`
+                    : "Not joined yet"}
+              </span>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Work summary — becomes the handover report once someone is deactivated */}
+      <div className={cn("bg-card border rounded-xl p-5 space-y-4", deactivated ? "border-brand/40" : "border-border")}>
+        <div>
+          <h3 className="text-sm font-semibold">{deactivated ? "Handover report" : "Work summary"}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {deactivated
+              ? `What ${member.name.split(" ")[0]} worked on before their account was deactivated.`
+              : "Brands and projects this person has worked on."}
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Brands worked on ({brandsWorkedOn.length})
+            </p>
+            {brandsWorkedOn.length === 0 && <p className="text-xs text-muted-foreground">No brands yet</p>}
+            <div className="flex flex-wrap gap-1.5">
+              {brandsWorkedOn.map(b => (
+                <Link key={b.id} href={`/brands/${b.id}`}
+                  className="text-xs px-2.5 py-1 rounded-full bg-brand/10 text-brand hover:bg-brand/20 transition-colors">
+                  {b.name} <span className="opacity-70">· {b.done}/{b.tasks} done</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Projects worked on ({projectsWorkedOn.length})
+            </p>
+            {projectsWorkedOn.length === 0 && <p className="text-xs text-muted-foreground">No projects yet</p>}
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {projectsWorkedOn.map(p => (
+                <Link key={p.id} href={`/projects/${p.id}`}
+                  className="flex items-center justify-between gap-3 text-xs px-2 py-1.5 rounded-md hover:bg-muted/40 transition-colors">
+                  <span className="truncate">
+                    {p.name}{p.brand && <span className="text-muted-foreground"> · {p.brand}</span>}
+                  </span>
+                  <span className="text-muted-foreground flex-shrink-0">{p.done}/{p.tasks} done</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {unfinished.length > 0 && (
+          <div className="space-y-2 pt-3 border-t border-border">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              {deactivated ? "Unfinished tasks to hand over" : "Unfinished tasks"} ({unfinished.length})
+            </p>
+            <div className="divide-y divide-border/40 max-h-56 overflow-y-auto">
+              {unfinished.map(t => (
+                <div key={t.id} className="py-2 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{t.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {(t.project as unknown as ProjRef)?.name ?? "—"} · Due {format(parseISO(t.deadline), "MMM d, yyyy")}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", STATUS_BADGE_STYLES[t.status])}>
+                    {STATUS_LABELS[t.status]}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stats */}

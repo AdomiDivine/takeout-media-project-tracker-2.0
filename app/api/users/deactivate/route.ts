@@ -26,34 +26,6 @@ async function getCaller(supabase: SupabaseClient) {
   return { id: user.id, role: (profile?.role ?? "") as string };
 }
 
-// GET: ids of deactivated users (admins only)
-export async function GET() {
-  try {
-    const supabase = serviceClient();
-    const caller = await getCaller(supabase);
-    if (!caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!["super_admin", "admin"].includes(caller.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const now = Date.now();
-    const deactivated: string[] = [];
-    for (let page = 1; ; page++) {
-      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
-      if (error) throw error;
-      for (const u of data.users) {
-        if (u.banned_until && new Date(u.banned_until).getTime() > now) deactivated.push(u.id);
-      }
-      if (data.users.length < 1000) break;
-    }
-
-    return NextResponse.json({ deactivated });
-  } catch (err: unknown) {
-    console.error("[users/deactivate GET]", err);
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Unexpected error" }, { status: 500 });
-  }
-}
-
 // POST { userId, active: boolean }
 export async function POST(req: NextRequest) {
   try {

@@ -187,10 +187,10 @@ export default function SettingsPage() {
         if (["super_admin", "admin"].includes(data.role)) {
           const { data: users } = await supabase.from("users").select("*").order("name");
           if (users) setAllUsers(users as User[]);
-          const statusRes = await fetch("/api/users/deactivate");
+          const statusRes = await fetch("/api/users/status");
           if (statusRes.ok) {
-            const { deactivated } = await statusRes.json();
-            setDeactivatedIds(new Set(deactivated as string[]));
+            const { users: statuses } = await statusRes.json() as { users: Record<string, { deactivated: boolean }> };
+            setDeactivatedIds(new Set(Object.keys(statuses).filter(id => statuses[id].deactivated)));
           }
           // Links like /settings?tab=members open straight to the Team Members tab
           if (new URLSearchParams(window.location.search).get("tab") === "members") setActiveTab("members");
@@ -374,7 +374,10 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            {allUsers.map(member => (
+            {/* Active people first, deactivated at the bottom */}
+            {[...allUsers]
+              .sort((a, b) => Number(deactivatedIds.has(a.id)) - Number(deactivatedIds.has(b.id)))
+              .map(member => (
               <div key={member.id} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
                 {/* Avatar */}
                 <div className={cn("w-8 h-8 rounded-full bg-muted flex-shrink-0 overflow-hidden", deactivatedIds.has(member.id) && "opacity-40 grayscale")}>
@@ -386,8 +389,8 @@ export default function SettingsPage() {
                   }
                 </div>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
+                {/* Info — greyed out when deactivated (the action button stays full colour) */}
+                <div className={cn("flex-1 min-w-0", deactivatedIds.has(member.id) && "opacity-50")}>
                   <p className="text-sm font-medium leading-tight truncate">
                     {member.name}
                     {member.id === user?.id && <span className="text-xs text-muted-foreground ml-1">(you)</span>}
