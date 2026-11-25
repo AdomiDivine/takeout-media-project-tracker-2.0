@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ImageUpload from "@/components/ui/image-upload";
+import { Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { User } from "@/types";
 
 const roleLabels: Record<string, string> = {
@@ -16,11 +18,14 @@ const roleLabels: Record<string, string> = {
   member:      "Member",
 };
 
-const roleBadgeColors: Record<string, string> = {
-  super_admin: "bg-brand/20 text-brand border-brand/30",
-  admin:       "bg-status-in-progress/20 text-status-in-progress border-status-in-progress/30",
-  member:      "bg-muted text-muted-foreground border-border",
-};
+type SettingsTab = "profile" | "account" | "members";
+
+// Who can delete whom: super admins can delete anyone but themselves; admins can delete members.
+function canDeleteUser(viewer: User | null, target: User) {
+  if (!viewer || viewer.id === target.id) return false;
+  if (viewer.role === "super_admin") return true;
+  return viewer.role === "admin" && target.role === "member";
+}
 
 function ChangePasswordCard({ email }: { email: string }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -93,8 +98,64 @@ function ChangePasswordCard({ email }: { email: string }) {
   );
 }
 
+function DeleteUserDialog({ target, onClose, onDeleted }: {
+  target: User | null;
+  onClose: () => void;
+  onDeleted: (userId: string) => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleDelete() {
+    if (!target) return;
+    setDeleting(true); setError("");
+    const res = await fetch("/api/users/delete", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: target.id }),
+    });
+    setDeleting(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Failed to delete user");
+      return;
+    }
+    onDeleted(target.id);
+  }
+
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => { if (!o && !deleting) { setError(""); onClose(); } }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete {target?.name}&apos;s account?</DialogTitle>
+          <DialogDescription>
+            {target?.email} will no longer be able to log in. This can&apos;t be undone.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="text-sm space-y-2">
+          <p><span className="font-medium">Kept:</span> tasks, projects and brands they created, and the activity log.</p>
+          <p><span className="font-medium">Removed:</span> their task assignments, comments, notifications and learning records.</p>
+        </div>
+
+        {error && <p className="text-sm text-status-overdue">{error}</p>}
+
+        <div className="flex gap-2 pt-1">
+          <Button type="button" variant="outline" className="flex-1" disabled={deleting}
+            onClick={() => { setError(""); onClose(); }}>
+            Cancel
+          </Button>
+          <Button type="button" variant="destructive" className="flex-1" disabled={deleting} onClick={handleDelete}>
+            {deleting ? "Deleting…" : "Delete account"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function SettingsPage() {
-  const membersRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -107,6 +168,7 @@ export default function SettingsPage() {
   // Members management (admin/super_admin only)
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   useEffect(() => {
     async function fetchUser() {
@@ -123,18 +185,15 @@ export default function SettingsPage() {
         if (["super_admin", "admin"].includes(data.role)) {
           const { data: users } = await supabase.from("users").select("*").order("name");
           if (users) setAllUsers(users as User[]);
+          // Links like /settings?tab=members open straight to the Team Members tab
+          if (new URLSearchParams(window.location.search).get("tab") === "members") setActiveTab("members");
         }
+        if (new URLSearchParams(window.location.search).get("tab") === "account") setActiveTab("account");
       }
       setFetchLoading(false);
     }
     fetchUser();
   }, []);
-
-  useEffect(() => {
-    if (!fetchLoading && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "members" && membersRef.current) {
-      setTimeout(() => membersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-    }
-  }, [fetchLoading]);
 
   async function handleAvatarUploaded(url: string) {
     if (!user) return;
@@ -173,7 +232,7 @@ export default function SettingsPage() {
 
   if (fetchLoading) {
     return (
-      <div className="space-y-5 max-w-2xl">
+      <div className="space-y-5 max-w-2xl mx-auto">
         <div className="h-7 w-24 bg-muted rounded animate-pulse" />
         <div className="h-72 bg-muted rounded-xl animate-pulse" />
       </div>
@@ -183,79 +242,109 @@ export default function SettingsPage() {
   const canManageMembers = ["super_admin", "admin"].includes(user?.role ?? "");
   const isSuperAdmin = user?.role === "super_admin";
 
+  const tabs: { key: SettingsTab; label: string }[] = [
+    { key: "profile", label: "Profile" },
+    { key: "account", label: "Account" },
+    ...(canManageMembers ? [{ key: "members" as const, label: "Team Members" }] : []),
+  ];
+
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-2xl mx-auto">
       <h2 className="text-lg font-semibold">Settings</h2>
 
-      {/* Profile */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-5">
-        <h3 className="font-medium text-sm">Profile</h3>
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+              activeTab === tab.key
+                ? "border-brand text-brand"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="flex items-center gap-5">
-          <ImageUpload
-            currentUrl={avatarUrl || null}
-            bucket="avatars"
-            shape="circle"
-            size="lg"
-            enableCrop
-            onUploaded={handleAvatarUploaded}
-          />
-          <div>
-            <p className="text-sm font-medium">{user?.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{roleLabels[user?.role ?? ""] ?? user?.role}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{user?.email}</p>
-          </div>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="settings-name">Display name</Label>
-            <Input id="settings-name" value={name} onChange={e => setName(e.target.value)} required />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="settings-job-title">Job title <span className="text-muted-foreground text-xs">(optional)</span></Label>
-            <Input
-              id="settings-job-title"
-              placeholder="e.g. Graphic Designer, Content Writer…"
-              value={jobTitle}
-              onChange={e => setJobTitle(e.target.value)}
+      {/* ── PROFILE: how you appear to the team ── */}
+      {activeTab === "profile" && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-5">
+          <div className="flex items-center gap-5">
+            <ImageUpload
+              currentUrl={avatarUrl || null}
+              bucket="avatars"
+              shape="circle"
+              size="lg"
+              enableCrop
+              onUploaded={handleAvatarUploaded}
             />
+            <div>
+              <p className="text-sm font-medium">{user?.name}</p>
+              {user?.job_title && <p className="text-xs text-muted-foreground mt-0.5">{user.job_title}</p>}
+              <p className="text-xs text-muted-foreground mt-0.5">Click the photo to change it</p>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input value={user?.email ?? ""} disabled className="opacity-60 cursor-not-allowed" />
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="settings-name">Display name</Label>
+              <Input id="settings-name" value={name} onChange={e => setName(e.target.value)} required />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="settings-job-title">Job title <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                id="settings-job-title"
+                placeholder="e.g. Graphic Designer, Content Writer…"
+                value={jobTitle}
+                onChange={e => setJobTitle(e.target.value)}
+              />
+            </div>
+
+            {error && <p className="text-sm text-status-overdue">{error}</p>}
+            {saved && <p className="text-sm text-status-completed">Changes saved.</p>}
+
+            <Button type="submit" className="bg-brand hover:bg-brand/90 text-white" disabled={loading}>
+              {loading ? "Saving…" : "Save changes"}
+            </Button>
+          </form>
+        </div>
+      )}
+
+      {/* ── ACCOUNT: login details and security ── */}
+      {activeTab === "account" && (
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <h3 className="font-medium text-sm">Account details</h3>
+
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={user?.email ?? ""} disabled className="opacity-60 cursor-not-allowed" />
+              <p className="text-xs text-muted-foreground">This is the email you log in with.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Platform role</Label>
+              <Input value={roleLabels[user?.role ?? ""] ?? user?.role ?? ""} disabled className="opacity-60 cursor-not-allowed" />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Member since {user ? new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—"}
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label>Platform role</Label>
-            <Input value={roleLabels[user?.role ?? ""] ?? user?.role ?? ""} disabled className="opacity-60 cursor-not-allowed" />
-          </div>
+          {user && <ChangePasswordCard email={user.email} />}
+        </div>
+      )}
 
-          {error && <p className="text-sm text-status-overdue">{error}</p>}
-          {saved && <p className="text-sm text-status-completed">Changes saved.</p>}
-
-          <Button type="submit" className="bg-brand hover:bg-brand/90 text-white" disabled={loading}>
-            {loading ? "Saving…" : "Save changes"}
-          </Button>
-        </form>
-      </div>
-
-      {/* Account info */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-        <h3 className="font-medium text-sm">Account</h3>
-        <p className="text-xs text-muted-foreground">
-          Member since {user ? new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—"}
-        </p>
-      </div>
-
-      {/* Change password */}
-      {user && <ChangePasswordCard email={user.email} />}
-
-      {/* Team members — admin/super_admin only */}
-      {canManageMembers && (
-        <div ref={membersRef} className="bg-card border border-border rounded-xl p-5 space-y-4">
+      {/* ── TEAM MEMBERS: admin/super_admin only ── */}
+      {activeTab === "members" && canManageMembers && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-medium text-sm">Team Members</h3>
             <span className="text-xs text-muted-foreground">{allUsers.length} member{allUsers.length !== 1 ? "s" : ""}</span>
@@ -280,40 +369,63 @@ export default function SettingsPage() {
                     {member.name}
                     {member.id === user?.id && <span className="text-xs text-muted-foreground ml-1">(you)</span>}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {member.email} · {roleLabels[member.role] ?? member.role}
+                  </p>
                 </div>
-
-                {/* Role — super_admin can change anyone's role except their own */}
-                {isSuperAdmin && member.id !== user?.id ? (
-                  <Select
-                    value={member.role}
-                    onValueChange={(v) => v && handleRoleChange(member.id, v)}
-                  >
-                    <SelectTrigger className="w-32 h-7 text-xs">
-                      <SelectValue>
-                        {roleLabels[member.role] ?? member.role}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="member"      label="Member">Member</SelectItem>
-                      <SelectItem value="admin"       label="Admin">Admin</SelectItem>
-                      <SelectItem value="super_admin" label="Super Admin">Super Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Badge variant="outline" className={`text-[10px] ${roleBadgeColors[member.role] ?? ""}`}>
-                    {roleLabels[member.role] ?? member.role}
-                  </Badge>
-                )}
 
                 {updatingRole === member.id && (
                   <div className="w-3 h-3 border-2 border-brand border-t-transparent rounded-full animate-spin flex-shrink-0" />
                 )}
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Super admins can change anyone's role except their own */}
+                  {isSuperAdmin && member.id !== user?.id && (
+                    <Select
+                      value={member.role}
+                      onValueChange={(v) => v && handleRoleChange(member.id, v)}
+                    >
+                      <SelectTrigger className="w-32 h-7 text-xs" aria-label={`Change ${member.name}'s role`}>
+                        <SelectValue>
+                          {roleLabels[member.role] ?? member.role}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="member"      label="Member">Member</SelectItem>
+                        <SelectItem value="admin"       label="Admin">Admin</SelectItem>
+                        <SelectItem value="super_admin" label="Super Admin">Super Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {canDeleteUser(user, member) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs text-status-overdue hover:text-status-overdue border-status-overdue/30 hover:bg-status-overdue/10"
+                      onClick={() => setUserToDelete(member)}
+                    >
+                      <Trash2 size={12} />
+                      Delete
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      <DeleteUserDialog
+        target={userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onDeleted={(id) => {
+          setAllUsers(prev => prev.filter(u => u.id !== id));
+          setUserToDelete(null);
+        }}
+      />
     </div>
   );
 }
