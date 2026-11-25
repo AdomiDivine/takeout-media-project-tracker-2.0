@@ -122,7 +122,11 @@ export default function SchedulePage() {
 
               {/* Task rows */}
               {sortedTasks.map((task, rowIdx) => {
-                const startOffset  = differenceInDays(new Date(task.created_at), rangeStart);
+                // Use the task's start date (may be backdated); fall back to when it was created
+                const startOffset  = differenceInDays(
+                  task.start_date ? new Date(task.start_date + "T00:00:00") : new Date(task.created_at),
+                  rangeStart
+                );
                 const endOffset    = differenceInDays(new Date(task.deadline + "T00:00:00"), rangeStart);
                 const clampedStart = Math.max(0, startOffset);
                 const clampedEnd   = Math.min(DAYS - 1, endOffset);
