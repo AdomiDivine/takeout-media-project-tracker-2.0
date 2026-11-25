@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
-import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { SectionTitle, SettingRow } from "./SettingRow";
+import { SectionTitle } from "./SettingRow";
 
 interface Session {
   id: string;
@@ -67,37 +66,26 @@ export default function SessionsSection() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function logOutOne(id: string) {
-    setBusy(id); setError("");
-    const { error: revokeError } = await createClient().rpc("revoke_my_session", { p_session_id: id });
-    setBusy(null);
-    if (revokeError) { setError("Couldn't log out that device. Please try again."); return; }
-    setSessions(prev => (prev ?? []).filter(s => s.id !== id));
-  }
-
-  async function logOut(scope: "local" | "others" | "global") {
+  async function logOut(scope: "global") {
     setBusy(scope); setError("");
     const { error: signOutError } = await createClient().auth.signOut({ scope });
     setBusy(null);
     if (signOutError) { setError(signOutError.message); return; }
-    if (scope === "others") { load(); return; }
     router.push("/login");
     router.refresh();
   }
 
-  const others = (sessions ?? []).filter(s => s.id !== currentId);
-
   return (
-    <div className="space-y-8">
+    <div>
       <div>
         <SectionTitle
           description="Devices and browsers currently signed in to your account."
-          action={others.length > 0 && (
+          action={
             <Button type="button" variant="outline" size="sm" className="h-8 text-xs flex-shrink-0"
-              disabled={busy !== null} onClick={() => logOut("others")}>
-              {busy === "others" ? "Logging out…" : "Log out other devices"}
+              disabled={busy !== null} onClick={() => logOut("global")}>
+              {busy === "global" ? "Logging out…" : "Log out of all devices"}
             </Button>
-          )}
+          }
         >
           Where you&apos;re logged in
         </SectionTitle>
@@ -118,7 +106,6 @@ export default function SessionsSection() {
                   <th className="font-normal py-2 pr-4">Device</th>
                   <th className="font-normal py-2 pr-4">Signed in</th>
                   <th className="font-normal py-2 pr-4">Last active</th>
-                  <th className="py-2" />
                 </tr>
               </thead>
               <tbody>
@@ -130,7 +117,7 @@ export default function SessionsSection() {
                         <span>{describeDevice(s.user_agent)}</span>
                         {isCurrent && (
                           <span className="ml-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
-                            This device
+                            Current
                           </span>
                         )}
                         {s.ip && <p className="text-xs text-muted-foreground mt-0.5">IP {s.ip}</p>}
@@ -141,14 +128,6 @@ export default function SessionsSection() {
                       <td className="py-3 pr-4 text-muted-foreground whitespace-nowrap">
                         {s.last_active ? formatDistanceToNow(parseISO(s.last_active), { addSuffix: true }) : "—"}
                       </td>
-                      <td className="py-3 text-right">
-                        {!isCurrent && (
-                          <button type="button" disabled={busy !== null} onClick={() => logOutOne(s.id)}
-                            className="text-xs text-muted-foreground hover:text-status-overdue disabled:opacity-50">
-                            {busy === s.id ? "Logging out…" : "Log out"}
-                          </button>
-                        )}
-                      </td>
                     </tr>
                   );
                 })}
@@ -156,23 +135,6 @@ export default function SessionsSection() {
             </table>
           </div>
         )}
-      </div>
-
-      <div>
-        <SectionTitle>Log out</SectionTitle>
-        <SettingRow label="Log out of this device" description="You'll need your password to log back in.">
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled={busy !== null} onClick={() => logOut("local")}>
-            <LogOut size={14} />
-            {busy === "local" ? "Logging out…" : "Log out"}
-          </Button>
-        </SettingRow>
-        <SettingRow label="Log out of all devices" description="Signs you out everywhere, including this device.">
-          <Button type="button" variant="outline" size="sm"
-            className="text-status-overdue hover:text-status-overdue border-status-overdue/30 hover:bg-status-overdue/10"
-            disabled={busy !== null} onClick={() => logOut("global")}>
-            {busy === "global" ? "Logging out…" : "Log out of all devices"}
-          </Button>
-        </SettingRow>
       </div>
 
       {error && <p className="text-sm text-status-overdue">{error}</p>}

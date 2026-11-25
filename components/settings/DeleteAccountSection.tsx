@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PasswordInput } from "@/components/ui/password-field";
-import { SectionTitle, SettingRow } from "./SettingRow";
+import { SettingRow } from "./SettingRow";
 
 const CONFIRM_WORD = "DELETE";
 
@@ -44,7 +44,6 @@ export default function DeleteAccountSection() {
 
   return (
     <div>
-      <SectionTitle>Danger zone</SectionTitle>
       <SettingRow label="Delete account" description="Permanently delete your account. This can't be undone.">
         <Button type="button" variant="outline" size="sm"
           className="text-status-overdue hover:text-status-overdue border-status-overdue/30 hover:bg-status-overdue/10"

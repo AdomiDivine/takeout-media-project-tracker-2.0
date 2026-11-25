@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ImageUpload from "@/components/ui/image-upload";
@@ -171,7 +170,6 @@ function DeactivateUserDialog({ target, onClose, onDeactivated }: {
 export default function SettingsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [showPreferred, setShowPreferred] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -200,7 +198,6 @@ export default function SettingsPage() {
         setName(data.name);
         setJobTitle(data.job_title ?? "");
         setPreferredName(data.preferred_name ?? "");
-        setShowPreferred(!!data.preferred_name);
         setAvatarUrl(data.avatar_url ?? "");
 
         if (["super_admin", "admin"].includes(data.role)) {
@@ -362,26 +359,15 @@ export default function SettingsPage() {
                   onUploaded={handleAvatarUploaded}
                 />
               </SettingRow>
-              <SettingRow label="Display name" description="The name you signed up with. This is how the team sees you." htmlFor="settings-name">
-                <div className={cn(FIELD, "text-left")}>
-                  <Input id="settings-name" value={name} onChange={e => setName(e.target.value)} required />
-                  {user && "preferred_name" in user && (
-                    showPreferred ? (
-                      <div className="mt-3 space-y-1.5">
-                        <Label htmlFor="settings-preferred-name" className="text-xs text-muted-foreground font-normal">What should we call you?</Label>
-                        <Input id="settings-preferred-name" placeholder={name.split(" ")[0]}
-                          value={preferredName} onChange={e => setPreferredName(e.target.value)} />
-                        <p className="text-[11px] text-muted-foreground">Used in greetings and emails.</p>
-                      </div>
-                    ) : (
-                      <button type="button" onClick={() => setShowPreferred(true)}
-                        className="mt-2 text-xs text-brand hover:underline">
-                        + What should we call you?
-                      </button>
-                    )
-                  )}
-                </div>
+              <SettingRow label="Full name" description="The name you signed up with. Shown on your profile and to the team." htmlFor="settings-name">
+                <Input id="settings-name" className={FIELD} value={name} onChange={e => setName(e.target.value)} required />
               </SettingRow>
+              {user && "preferred_name" in user && (
+                <SettingRow label="What should we call you?" description="Only used to greet you and in messages to you. Your profile keeps your full name." htmlFor="settings-preferred-name">
+                  <Input id="settings-preferred-name" className={FIELD} placeholder={name.split(" ")[0]}
+                    value={preferredName} onChange={e => setPreferredName(e.target.value)} />
+                </SettingRow>
+              )}
               <SettingRow label="Role" description="Your job title, shown on your profile." htmlFor="settings-job-title">
                 <Input id="settings-job-title" className={FIELD} placeholder="e.g. Graphic Designer"
                   value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
