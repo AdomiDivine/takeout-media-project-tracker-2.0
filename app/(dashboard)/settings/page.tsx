@@ -22,6 +22,77 @@ const roleBadgeColors: Record<string, string> = {
   member:      "bg-muted text-muted-foreground border-border",
 };
 
+function ChangePasswordCard({ email }: { email: string }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError(""); setSaved(false);
+
+    if (newPassword.length < 8) { setError("New password must be at least 8 characters."); return; }
+    if (newPassword !== confirmPassword) { setError("New passwords don't match."); return; }
+    if (newPassword === currentPassword) { setError("New password must be different from your current password."); return; }
+
+    setLoading(true);
+    const supabase = createClient();
+
+    // Confirm the current password before allowing a change
+    const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+    if (verifyError) {
+      setLoading(false);
+      setError("Current password is incorrect.");
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(false);
+    if (updateError) { setError(updateError.message); return; }
+
+    setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+    setSaved(true);
+    setTimeout(() => setSaved(false), 4000);
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+      <div>
+        <h3 className="font-medium text-sm">Change password</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Use at least 8 characters.</p>
+      </div>
+
+      <form onSubmit={handleChangePassword} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="current-password">Current password</Label>
+          <Input id="current-password" type="password" autoComplete="current-password"
+            value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="new-password">New password</Label>
+          <Input id="new-password" type="password" autoComplete="new-password" minLength={8}
+            value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirm-password">Confirm new password</Label>
+          <Input id="confirm-password" type="password" autoComplete="new-password" minLength={8}
+            value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+        </div>
+
+        {error && <p className="text-sm text-status-overdue">{error}</p>}
+        {saved && <p className="text-sm text-status-completed">Password updated.</p>}
+
+        <Button type="submit" className="bg-brand hover:bg-brand/90 text-white" disabled={loading}>
+          {loading ? "Updating…" : "Update password"}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const membersRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -178,6 +249,9 @@ export default function SettingsPage() {
           Member since {user ? new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—"}
         </p>
       </div>
+
+      {/* Change password */}
+      {user && <ChangePasswordCard email={user.email} />}
 
       {/* Team members — admin/super_admin only */}
       {canManageMembers && (
